@@ -94,8 +94,6 @@ const InputForm = () => {
 
     try {
       setLoading(true);
-      console.log('🔵 Starting to save reading...', new Date().toISOString());
-      const startTime = performance.now();
       
       const tokenCostNumeric = formData.token_cost ? parseRupiah(formData.token_cost) : null;
       
@@ -106,8 +104,6 @@ const InputForm = () => {
         notes: formData.notes || null,
         // created_at will be set to serverTimestamp() if not provided
       };
-
-      console.log('📤 Sending data to Firebase:', readingData);
       
       // Add timeout to prevent hanging
       const savePromise = addReading(readingData);
@@ -116,10 +112,6 @@ const InputForm = () => {
       );
       
       await Promise.race([savePromise, timeoutPromise]);
-      
-      const endTime = performance.now();
-      const duration = ((endTime - startTime) / 1000).toFixed(2);
-      console.log(`✅ Reading saved successfully in ${duration} seconds`);
       
       setSuccess(true);
       

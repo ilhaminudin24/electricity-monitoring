@@ -9,6 +9,16 @@
       content="Personal electricity monitoring application"
     />
     <title>Electricity Monitoring</title>
+    <script>
+      // Handle redirect from 404.html
+      (function() {
+        var redirectPath = sessionStorage.getItem('redirectPath');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectPath');
+          history.replaceState(null, null, redirectPath);
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

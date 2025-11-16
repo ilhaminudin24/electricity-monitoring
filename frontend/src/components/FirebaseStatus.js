@@ -18,7 +18,6 @@ const FirebaseStatus = () => {
     setStatus({ connected: null, loading: true, latency: null, error: null });
     
     try {
-      console.log('🔍 Checking Firebase connection...');
       const startTime = performance.now();
       
       // Try to read from Firestore
@@ -28,7 +27,6 @@ const FirebaseStatus = () => {
       const endTime = performance.now();
       const latency = ((endTime - startTime) / 1000).toFixed(2);
       
-      console.log(`✅ Firebase connected! Latency: ${latency}s`);
       setStatus({
         connected: true,
         loading: false,
@@ -36,7 +34,6 @@ const FirebaseStatus = () => {
         error: null,
       });
     } catch (error) {
-      console.error('❌ Firebase connection error:', error);
       setStatus({
         connected: false,
         loading: false,

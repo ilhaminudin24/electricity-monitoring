@@ -72,9 +72,6 @@ const dateToTimestamp = (date) => {
  */
 export const addReading = async (readingData) => {
   try {
-    console.log('🔵 [Firestore] Starting addReading...', new Date().toISOString());
-    const startTime = performance.now();
-    
     const { reading_kwh, token_cost, notes, created_at } = readingData;
 
     // Auto-calculate token amount if token cost is provided
@@ -89,16 +86,10 @@ export const addReading = async (readingData) => {
       created_at: created_at ? dateToTimestamp(created_at) : serverTimestamp(),
     };
 
-    console.log('📝 [Firestore] Prepared data:', data);
     const docRef = await addDoc(collection(db, COLLECTION_NAME), data);
-    
-    const endTime = performance.now();
-    const duration = ((endTime - startTime) / 1000).toFixed(2);
-    console.log(`✅ [Firestore] Reading added with ID: ${docRef.id} in ${duration}s`);
-    
     return docRef.id;
   } catch (error) {
-    console.error('❌ [Firestore] Error adding reading:', error);
+    console.error('Error adding reading:', error);
     throw new Error('Failed to add reading: ' + error.message);
   }
 };

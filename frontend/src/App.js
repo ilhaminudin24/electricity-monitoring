@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import InputForm from './pages/InputForm';
 import History from './pages/History';
 import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
 
 // Get basename for GitHub Pages
 // If homepage is set in package.json, extract the pathname
@@ -20,13 +21,20 @@ const getBasename = () => {
 
 function App() {
   return (
-    <Router basename={getBasename()}>
+    <Router 
+      basename={getBasename()}
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/input" element={<InputForm />} />
           <Route path="/history" element={<History />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
     </Router>
