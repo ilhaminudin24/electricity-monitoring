@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllReadings, getLatestReading } from '../services/firestoreService';
+import { getAllReadings } from '../services/firestoreService';
 import { calculateDailyUsage, calculateWeeklyUsage, calculateMonthlyUsage, calculateTokenPrediction } from '../utils/analytics';
 import StatCard from '../components/StatCard';
 import DailyChart from '../components/charts/DailyChart';
