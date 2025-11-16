@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { readingsAPI, analyticsAPI } from '../api/client';
+import { getAllReadings, getLatestReading } from '../services/firestoreService';
+import { calculateDailyUsage, calculateWeeklyUsage, calculateMonthlyUsage, calculateTokenPrediction } from '../utils/analytics';
 import StatCard from '../components/StatCard';
 import DailyChart from '../components/charts/DailyChart';
 import WeeklyChart from '../components/charts/WeeklyChart';
@@ -28,25 +29,25 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Load all data in parallel
-      const [latestRes, dailyRes, weeklyRes, monthlyRes, predictionRes] = await Promise.all([
-        readingsAPI.getLatest().catch(() => ({ data: null })),
-        analyticsAPI.getDaily(30),
-        analyticsAPI.getWeekly(12),
-        analyticsAPI.getMonthly(12),
-        analyticsAPI.getPrediction(),
-      ]);
-
-      const latest = latestRes.data;
+      // Fetch all readings from Firestore
+      const readings = await getAllReadings();
+      
+      // Get latest reading
+      const latest = readings.length > 0 ? readings[0] : null;
+      
+      // Calculate analytics from readings
+      const dailyUsage = calculateDailyUsage(readings, 30);
+      const weeklyUsage = calculateWeeklyUsage(readings, 12);
+      const monthlyUsage = calculateMonthlyUsage(readings, 12);
+      const prediction = calculateTokenPrediction(readings);
       
       // Calculate monthly usage (current month)
-      const currentMonthData = monthlyRes.data.find(
-        (m) => m.month === new Date().toISOString().slice(0, 7)
-      );
-      const monthlyUsage = currentMonthData?.usage_kwh || 0;
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentMonthData = monthlyUsage.find((m) => m.month === currentMonth);
+      const monthlyUsageValue = currentMonthData?.usage_kwh || 0;
 
       // Calculate daily average from last 30 days
-      const validDailyUsage = dailyRes.data
+      const validDailyUsage = dailyUsage
         .filter((d) => d.usage_kwh > 0)
         .map((d) => d.usage_kwh);
       const dailyAverage = validDailyUsage.length > 0
@@ -54,15 +55,15 @@ const Dashboard = () => {
         : 0;
 
       setStats({
-        monthlyUsage: parseFloat(monthlyUsage.toFixed(2)),
+        monthlyUsage: parseFloat(monthlyUsageValue.toFixed(2)),
         dailyAverage: parseFloat(dailyAverage.toFixed(2)),
         lastInput: latest,
       });
 
-      setDailyData(dailyRes.data);
-      setWeeklyData(weeklyRes.data);
-      setMonthlyData(monthlyRes.data);
-      setPrediction(predictionRes.data);
+      setDailyData(dailyUsage);
+      setWeeklyData(weeklyUsage);
+      setMonthlyData(monthlyUsage);
+      setPrediction(prediction);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {

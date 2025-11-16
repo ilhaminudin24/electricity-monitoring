@@ -4,37 +4,52 @@
  */
 
 /**
- * Format datetime string to Indonesian locale format
- * Input: ISO string like "2025-11-16T19:00:00" or SQLite format "2025-11-16 19:00:00"
+ * Format datetime to Indonesian locale format
+ * Input: Date object, Firestore Timestamp, ISO string, or SQLite format
  * Output: "16 Nov 2025, 19:00" (id-ID format)
  */
-export const formatDateTimeLocal = (dateTimeString) => {
-  if (!dateTimeString) return 'N/A';
+export const formatDateTimeLocal = (dateInput) => {
+  if (!dateInput) return 'N/A';
 
   try {
-    let datePart, timePart;
+    let date;
     
-    // Handle SQLite format (YYYY-MM-DD HH:MM:SS) or ISO format (YYYY-MM-DDTHH:MM:SS)
-    if (dateTimeString.includes('T')) {
-      // ISO format
-      [datePart, timePart] = dateTimeString.split('T');
-    } else if (dateTimeString.includes(' ')) {
-      // SQLite format
-      [datePart, timePart] = dateTimeString.split(' ');
+    // Handle different input types
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    } else if (dateInput.toDate && typeof dateInput.toDate === 'function') {
+      // Firestore Timestamp
+      date = dateInput.toDate();
+    } else if (typeof dateInput === 'string') {
+      // String format
+      let datePart, timePart;
+      
+      if (dateInput.includes('T')) {
+        // ISO format
+        [datePart, timePart] = dateInput.split('T');
+      } else if (dateInput.includes(' ')) {
+        // SQLite format
+        [datePart, timePart] = dateInput.split(' ');
+      } else {
+        // Date only
+        datePart = dateInput;
+        timePart = '00:00:00';
+      }
+
+      if (!datePart) return 'N/A';
+
+      const [year, month, day] = datePart.split('-').map(Number);
+      const timeStr = timePart ? timePart.split('.')[0] : '00:00:00';
+      const [hours, minutes] = timeStr.split(':').map(Number);
+
+      // Create date object in local timezone
+      date = new Date(year, month - 1, day, hours || 0, minutes || 0);
     } else {
-      // Date only
-      datePart = dateTimeString;
-      timePart = '00:00:00';
+      // Try to parse as Date
+      date = new Date(dateInput);
     }
 
-    if (!datePart) return 'N/A';
-
-    const [year, month, day] = datePart.split('-').map(Number);
-    const timeStr = timePart ? timePart.split('.')[0] : '00:00:00'; // Remove milliseconds if present
-    const [hours, minutes] = timeStr.split(':').map(Number);
-
-    // Create date object in local timezone (this is just for formatting, not conversion)
-    const date = new Date(year, month - 1, day, hours || 0, minutes || 0);
+    if (isNaN(date.getTime())) return 'N/A';
 
     // Format using Indonesian locale
     return new Intl.DateTimeFormat('id-ID', {
@@ -47,21 +62,7 @@ export const formatDateTimeLocal = (dateTimeString) => {
     }).format(date);
   } catch (error) {
     console.error('Error formatting date:', error);
-    // Fallback: try to parse as regular date
-    try {
-      const date = new Date(dateTimeString);
-      if (isNaN(date.getTime())) return 'N/A';
-      return new Intl.DateTimeFormat('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(date);
-    } catch {
-      return 'N/A';
-    }
+    return 'N/A';
   }
 };
 
@@ -132,34 +133,46 @@ export const toLocalISOString = (dateInput) => {
 };
 
 /**
- * Convert datetime string to input format for datetime-local input
- * Input: ISO string like "2025-11-16T19:00:00" or SQLite format "2025-11-16 19:00:00"
+ * Convert datetime to input format for datetime-local input
+ * Input: Date object, ISO string, SQLite format, or Firestore Timestamp
  * Output: "2025-11-16T19:00" (format for datetime-local input)
  */
-export const toDateTimeLocalInput = (dateTimeString) => {
-  if (!dateTimeString) return '';
+export const toDateTimeLocalInput = (dateInput) => {
+  if (!dateInput) return '';
 
   try {
-    let datePart, timePart;
+    let date;
     
-    // Handle SQLite format (YYYY-MM-DD HH:MM:SS) or ISO format (YYYY-MM-DDTHH:MM:SS)
-    if (dateTimeString.includes('T')) {
-      // ISO format
-      [datePart, timePart] = dateTimeString.split('T');
-    } else if (dateTimeString.includes(' ')) {
-      // SQLite format
-      [datePart, timePart] = dateTimeString.split(' ');
+    // Handle different input types
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    } else if (dateInput.toDate && typeof dateInput.toDate === 'function') {
+      // Firestore Timestamp
+      date = dateInput.toDate();
+    } else if (typeof dateInput === 'string') {
+      // String format
+      if (dateInput.includes('T')) {
+        date = new Date(dateInput);
+      } else if (dateInput.includes(' ')) {
+        // SQLite format
+        date = new Date(dateInput.replace(' ', 'T'));
+      } else {
+        return '';
+      }
     } else {
       return '';
     }
 
-    if (!datePart) return '';
+    if (isNaN(date.getTime())) return '';
 
-    const timeStr = timePart ? timePart.split('.')[0] : '00:00:00';
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    // Format as YYYY-MM-DDTHH:mm for datetime-local input
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
 
-    // Return format suitable for datetime-local input (YYYY-MM-DDTHH:mm)
-    return `${datePart}T${String(hours || 0).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   } catch (error) {
     console.error('Error converting to datetime-local input:', error);
     return '';

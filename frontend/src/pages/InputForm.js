@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { readingsAPI } from '../api/client';
+import { addReading } from '../services/firestoreService';
 import { formatRupiah, parseRupiah, formatRupiahInput } from '../utils/rupiah';
 import { calculateTokenAmount } from '../utils/settings';
-import { toLocalISOString } from '../utils/date';
 
 const InputForm = () => {
   const navigate = useNavigate();
@@ -97,20 +96,15 @@ const InputForm = () => {
       setLoading(true);
       const tokenCostNumeric = formData.token_cost ? parseRupiah(formData.token_cost) : null;
       
-      // Get current local datetime without timezone conversion
-      const now = new Date();
-      const localISO = toLocalISOString(now);
-      const sqliteDateTime = localISO ? localISO.replace('T', ' ').slice(0, 19) : null;
-      
-      const payload = {
+      // Prepare data for Firestore
+      const readingData = {
         reading_kwh: parseFloat(formData.reading_kwh),
-        token_amount: formData.token_amount ? parseFloat(formData.token_amount) : null,
         token_cost: tokenCostNumeric,
         notes: formData.notes || null,
-        created_at: sqliteDateTime,
+        // created_at will be set to serverTimestamp() if not provided
       };
 
-      await readingsAPI.create(payload);
+      await addReading(readingData);
       setSuccess(true);
       
       // Reset form
@@ -128,7 +122,7 @@ const InputForm = () => {
         navigate('/');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save reading. Please try again.');
+      setError(err.message || 'Failed to save reading. Please try again.');
     } finally {
       setLoading(false);
     }

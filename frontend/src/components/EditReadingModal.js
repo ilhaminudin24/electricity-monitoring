@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatRupiah, parseRupiah, formatRupiahInput } from '../utils/rupiah';
 import { calculateTokenAmount } from '../utils/settings';
-import { toDateTimeLocalInput, fromDateTimeLocalInput, toLocalISOString } from '../utils/date';
+import { toDateTimeLocalInput, fromDateTimeLocalInput } from '../utils/date';
 
 const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
   const [formData, setFormData] = useState({
@@ -19,7 +19,19 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
     if (reading && isOpen) {
       // Pre-fill form with existing reading data
       const tokenCost = reading.token_cost ? formatRupiahInput(reading.token_cost) : '';
-      const dateTimeInput = reading.created_at ? toDateTimeLocalInput(reading.created_at) : '';
+      
+      // Handle Firestore timestamp or Date object
+      let dateTimeInput = '';
+      if (reading.created_at) {
+        if (reading.created_at instanceof Date) {
+          dateTimeInput = toDateTimeLocalInput(reading.created_at);
+        } else if (reading.created_at.toDate && typeof reading.created_at.toDate === 'function') {
+          // Firestore Timestamp
+          dateTimeInput = toDateTimeLocalInput(reading.created_at.toDate());
+        } else {
+          dateTimeInput = toDateTimeLocalInput(reading.created_at);
+        }
+      }
 
       setFormData({
         reading_kwh: reading.reading_kwh || '',
@@ -100,28 +112,22 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
     try {
       setLoading(true);
 
-      // Convert datetime-local input to ISO format
+      // Convert datetime-local input to Date object for Firestore
       const created_at = formData.created_at
-        ? fromDateTimeLocalInput(formData.created_at)
-        : null;
-
-      // Convert to SQLite datetime format (YYYY-MM-DD HH:MM:SS)
-      const sqliteDateTime = created_at
-        ? created_at.replace('T', ' ').slice(0, 19)
+        ? new Date(fromDateTimeLocalInput(formData.created_at))
         : null;
 
       const payload = {
         reading_kwh: parseFloat(formData.reading_kwh),
-        token_amount: calculatedTokenAmount ? calculatedTokenAmount : null,
         token_cost: tokenCostNumeric,
         notes: formData.notes || null,
-        created_at: sqliteDateTime,
+        created_at: created_at, // Firestore will handle timestamp conversion
       };
 
       await onSave(reading.id, payload);
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update reading. Please try again.');
+      setError(err.message || 'Failed to update reading. Please try again.');
     } finally {
       setLoading(false);
     }

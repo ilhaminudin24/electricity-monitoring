@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { readingsAPI } from '../api/client';
+import { getAllReadings, updateReading, deleteReading } from '../services/firestoreService';
 import { formatRupiah } from '../utils/rupiah';
 import { formatDateTimeLocal } from '../utils/date';
 import EditReadingModal from '../components/EditReadingModal';
@@ -14,14 +14,24 @@ const History = () => {
   const [selectedReading, setSelectedReading] = useState(null);
 
   useEffect(() => {
+    // Option 1: One-time fetch (current)
     loadReadings();
+    
+    // Option 2: Real-time listener (uncomment to enable)
+    // const unsubscribe = getAllReadings((updatedReadings) => {
+    //   setReadings(updatedReadings);
+    //   setLoading(false);
+    // });
+    // return () => {
+    //   if (unsubscribe) unsubscribe();
+    // };
   }, []);
 
   const loadReadings = async () => {
     try {
       setLoading(true);
-      const response = await readingsAPI.getAll();
-      setReadings(response.data);
+      const readings = await getAllReadings();
+      setReadings(readings);
     } catch (err) {
       setError('Failed to load readings. Please try again.');
       console.error('Error loading readings:', err);
@@ -42,7 +52,7 @@ const History = () => {
 
   const handleSaveEdit = async (id, payload) => {
     try {
-      await readingsAPI.update(id, payload);
+      await updateReading(id, payload);
       await loadReadings(); // Refresh the list
       setEditModalOpen(false);
       setSelectedReading(null);
@@ -55,7 +65,7 @@ const History = () => {
     if (!selectedReading) return;
 
     try {
-      await readingsAPI.delete(selectedReading.id);
+      await deleteReading(selectedReading.id);
       await loadReadings(); // Refresh the list
       setDeleteModalOpen(false);
       setSelectedReading(null);
