@@ -94,6 +94,9 @@ const InputForm = () => {
 
     try {
       setLoading(true);
+      console.log('🔵 Starting to save reading...', new Date().toISOString());
+      const startTime = performance.now();
+      
       const tokenCostNumeric = formData.token_cost ? parseRupiah(formData.token_cost) : null;
       
       // Prepare data for Firestore
@@ -104,7 +107,13 @@ const InputForm = () => {
         // created_at will be set to serverTimestamp() if not provided
       };
 
+      console.log('📤 Sending data to Firebase:', readingData);
       await addReading(readingData);
+      
+      const endTime = performance.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(2);
+      console.log(`✅ Reading saved successfully in ${duration} seconds`);
+      
       setSuccess(true);
       
       // Reset form
