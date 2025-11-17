@@ -30,6 +30,10 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Pantau konsumsi listrik Anda",
+    "totalUsage": "Total Pemakaian",
+    "totalCost": "Total Biaya",
+    "highestUsage": "Tertinggi",
+    "perDay": "per hari",
     "monthlyUsage": "Pemakaian Bulanan",
     "currentMonth": "Bulan ini",
     "dailyAverage": "Rata-rata Harian",

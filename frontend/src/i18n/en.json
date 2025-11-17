@@ -30,6 +30,10 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Monitor your electricity consumption",
+    "totalUsage": "Total Usage",
+    "totalCost": "Total Cost",
+    "highestUsage": "Highest",
+    "perDay": "per day",
     "monthlyUsage": "Monthly Usage",
     "currentMonth": "Current month",
     "dailyAverage": "Daily Average",

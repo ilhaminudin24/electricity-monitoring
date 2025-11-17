@@ -12,6 +12,9 @@
 export const calculateDailyUsage = (readings, days = 30) => {
   if (!readings || readings.length === 0) return [];
 
+  console.log('📊 calculateDailyUsage called with:', readings.length, 'readings');
+  console.log('Raw readings:', readings);
+
   // Sort by date (oldest first)
   const sorted = [...readings].sort((a, b) => {
     const dateA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at);
@@ -19,10 +22,17 @@ export const calculateDailyUsage = (readings, days = 30) => {
     return dateA - dateB;
   });
 
+  console.log('Sorted readings (oldest first):', sorted.map(r => ({
+    date: r.created_at,
+    reading: r.reading_kwh
+  })));
+
   // Get date range
   const now = new Date();
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - days);
+
+  console.log('Date range:', startDate, 'to', now);
 
   // Group by date
   const dailyMap = new Map();
@@ -34,7 +44,10 @@ export const calculateDailyUsage = (readings, days = 30) => {
       ? reading.created_at 
       : new Date(reading.created_at);
     
-    if (date < startDate) continue;
+    if (date < startDate) {
+      console.log('Skipping reading before start date:', date, reading.reading_kwh);
+      continue;
+    }
 
     const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
     
@@ -43,16 +56,22 @@ export const calculateDailyUsage = (readings, days = 30) => {
         date: dateKey,
         last_reading: reading.reading_kwh,
         first_reading: reading.reading_kwh,
+        readings: [reading.reading_kwh]
       });
+      console.log(`New day ${dateKey}:`, reading.reading_kwh);
     } else {
       const existing = dailyMap.get(dateKey);
       existing.last_reading = reading.reading_kwh;
+      existing.readings.push(reading.reading_kwh);
       // Keep first reading of the day
       if (reading.reading_kwh < existing.first_reading) {
         existing.first_reading = reading.reading_kwh;
       }
+      console.log(`Updated day ${dateKey}:`, existing);
     }
   }
+
+  console.log('Daily map:', Array.from(dailyMap.entries()));
 
   // Calculate usage between consecutive days
   const dailyArray = Array.from(dailyMap.entries())
@@ -60,30 +79,72 @@ export const calculateDailyUsage = (readings, days = 30) => {
       date,
       last_reading: data.last_reading,
       first_reading: data.first_reading,
+      readings: data.readings
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
+
+  console.log('Daily array (sorted):', dailyArray);
 
   // Calculate usage
   const result = dailyArray.map((day, index) => {
     if (index === 0) {
-      return {
-        date: day.date,
-        usage_kwh: 0,
-        last_reading: day.last_reading,
-      };
+      // For the first day, check if there are multiple readings
+      if (day.readings && day.readings.length > 1) {
+        // Calculate usage within the day (last - first)
+        const withinDayUsage = day.last_reading - day.first_reading;
+        console.log(`Day ${day.date} (first, multiple readings):`, {
+          first: day.first_reading,
+          last: day.last_reading,
+          readings: day.readings,
+          usage: withinDayUsage
+        });
+        return {
+          date: day.date,
+          usage_kwh: Math.max(0, Math.abs(withinDayUsage)), // Use absolute value to handle decreasing readings
+          last_reading: day.last_reading,
+        };
+      } else {
+        // Single reading on first day - no usage can be calculated
+        console.log(`Day ${day.date} (first, single reading):`, {
+          reading: day.last_reading,
+          usage: 0
+        });
+        return {
+          date: day.date,
+          usage_kwh: 0,
+          last_reading: day.last_reading,
+        };
+      }
     }
 
     const prevDay = dailyArray[index - 1];
-    const usage = day.first_reading - prevDay.last_reading;
+    // Calculate usage as the absolute difference to handle meter resets
+    const rawUsage = day.first_reading - prevDay.last_reading;
+    const usage = Math.abs(rawUsage); // Use absolute value
+    
+    console.log(`Day ${day.date}:`, {
+      current_first: day.first_reading,
+      prev_last: prevDay.last_reading,
+      raw_calculated: rawUsage,
+      absolute_usage: usage,
+      will_use: usage > 500 ? 0 : usage // Filter out unrealistic values
+    });
+    
+    // Filter out unrealistic usage values (>500 kWh per day suggests meter reset)
+    const finalUsage = usage > 500 ? 0 : usage;
     
     return {
       date: day.date,
-      usage_kwh: Math.max(0, usage), // Ensure non-negative
+      usage_kwh: finalUsage,
       last_reading: day.last_reading,
     };
   });
 
-  return result.reverse(); // Most recent first
+  console.log('Final result (before reverse):', result);
+  const reversed = result.reverse(); // Most recent first
+  console.log('Final result (after reverse):', reversed);
+  
+  return reversed;
 };
 
 /**
@@ -94,6 +155,8 @@ export const calculateDailyUsage = (readings, days = 30) => {
  */
 export const calculateWeeklyUsage = (readings, weeks = 12) => {
   if (!readings || readings.length === 0) return [];
+
+  console.log('📅 calculateWeeklyUsage called with:', readings.length, 'readings');
 
   const sorted = [...readings].sort((a, b) => {
     const dateA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at);
@@ -128,6 +191,8 @@ export const calculateWeeklyUsage = (readings, weeks = 12) => {
     if (date > weekData.week_end) weekData.week_end = date;
   });
 
+  console.log('Weekly map entries:', Array.from(weeklyMap.keys()));
+
   // Calculate usage per week
   const weeklyArray = Array.from(weeklyMap.entries())
     .map(([week, data]) => ({
@@ -136,27 +201,44 @@ export const calculateWeeklyUsage = (readings, weeks = 12) => {
       week_end: data.week_end.toISOString().split('T')[0],
       max_reading: Math.max(...data.readings),
       min_reading: Math.min(...data.readings),
+      readings: data.readings,
     }))
     .sort((a, b) => a.week.localeCompare(b.week));
 
   // Calculate usage between consecutive weeks
   const result = weeklyArray.map((week, index) => {
     if (index === 0) {
+      // For first week, calculate within-week usage if multiple readings
+      const withinWeekUsage = week.readings.length > 1 
+        ? Math.abs(week.max_reading - week.min_reading)
+        : 0;
+      console.log(`Week ${week.week} (first):`, {
+        readings: week.readings.length,
+        usage: withinWeekUsage
+      });
       return {
         ...week,
-        usage_kwh: 0,
+        usage_kwh: withinWeekUsage,
       };
     }
 
     const prevWeek = weeklyArray[index - 1];
-    const usage = week.min_reading - prevWeek.max_reading;
+    const rawUsage = week.min_reading - prevWeek.max_reading;
+    const usage = Math.abs(rawUsage);
+
+    console.log(`Week ${week.week}:`, {
+      current_min: week.min_reading,
+      prev_max: prevWeek.max_reading,
+      usage: usage > 500 ? 0 : usage
+    });
 
     return {
       ...week,
-      usage_kwh: Math.max(0, usage),
+      usage_kwh: usage > 500 ? 0 : usage, // Filter unrealistic values
     };
   });
 
+  console.log('Weekly result:', result);
   return result.reverse();
 };
 
@@ -168,6 +250,8 @@ export const calculateWeeklyUsage = (readings, weeks = 12) => {
  */
 export const calculateMonthlyUsage = (readings, months = 12) => {
   if (!readings || readings.length === 0) return [];
+
+  console.log('📆 calculateMonthlyUsage called with:', readings.length, 'readings');
 
   const sorted = [...readings].sort((a, b) => {
     const dateA = a.created_at instanceof Date ? a.created_at : new Date(a.created_at);
@@ -200,6 +284,8 @@ export const calculateMonthlyUsage = (readings, months = 12) => {
     if (date > monthData.month_end) monthData.month_end = date;
   });
 
+  console.log('Monthly map entries:', Array.from(monthlyMap.keys()));
+
   // Calculate usage per month
   const monthlyArray = Array.from(monthlyMap.entries())
     .map(([month, data]) => ({
@@ -208,27 +294,44 @@ export const calculateMonthlyUsage = (readings, months = 12) => {
       month_end: data.month_end.toISOString().split('T')[0],
       max_reading: Math.max(...data.readings),
       min_reading: Math.min(...data.readings),
+      readings: data.readings,
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
 
   // Calculate usage between consecutive months
   const result = monthlyArray.map((month, index) => {
     if (index === 0) {
+      // For first month, calculate within-month usage if multiple readings
+      const withinMonthUsage = month.readings.length > 1 
+        ? Math.abs(month.max_reading - month.min_reading)
+        : 0;
+      console.log(`Month ${month.month} (first):`, {
+        readings: month.readings.length,
+        usage: withinMonthUsage
+      });
       return {
         ...month,
-        usage_kwh: 0,
+        usage_kwh: withinMonthUsage,
       };
     }
 
     const prevMonth = monthlyArray[index - 1];
-    const usage = month.min_reading - prevMonth.max_reading;
+    const rawUsage = month.min_reading - prevMonth.max_reading;
+    const usage = Math.abs(rawUsage);
+
+    console.log(`Month ${month.month}:`, {
+      current_min: month.min_reading,
+      prev_max: prevMonth.max_reading,
+      usage: usage > 500 ? 0 : usage
+    });
 
     return {
       ...month,
-      usage_kwh: Math.max(0, usage),
+      usage_kwh: usage > 500 ? 0 : usage, // Filter unrealistic values
     };
   });
 
+  console.log('Monthly result:', result);
   return result.reverse();
 };
 
