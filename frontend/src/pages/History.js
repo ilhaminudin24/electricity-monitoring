@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getAllReadings, updateReading, deleteReading } from '../services/firestoreService';
 import { formatRupiah } from '../utils/rupiah';
@@ -15,6 +15,19 @@ const History = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedReading, setSelectedReading] = useState(null);
 
+  const loadReadings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const readings = await getAllReadings();
+      setReadings(readings);
+    } catch (err) {
+      setError(t('history.loadingHistory'));
+      console.error('Error loading readings:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
   useEffect(() => {
     // Option 1: One-time fetch (current)
     loadReadings();
@@ -27,20 +40,7 @@ const History = () => {
     // return () => {
     //   if (unsubscribe) unsubscribe();
     // };
-  }, []);
-
-  const loadReadings = async () => {
-    try {
-      setLoading(true);
-      const readings = await getAllReadings();
-      setReadings(readings);
-    } catch (err) {
-      setError(t('history.loadingHistory'));
-      console.error('Error loading readings:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [loadReadings]);
 
   const handleEdit = (reading) => {
     setSelectedReading(reading);

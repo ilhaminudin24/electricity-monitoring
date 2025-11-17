@@ -192,7 +192,8 @@
     "daysAgo": "days ago",
     "hoursAgo": "hours ago",
     "minutesAgo": "minutes ago",
-    "justNow": "Just now"
+    "justNow": "Just now",
+    "latest": "Latest"
   },
   "chart": {
     "date": "Date",

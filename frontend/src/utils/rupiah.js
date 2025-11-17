@@ -3,7 +3,7 @@
  * Now uses locale-aware formatting
  */
 
-import { formatCurrency, getCurrentLocale, parseFormattedNumber } from './localeFormatter';
+import { formatCurrency, parseFormattedNumber } from './localeFormatter';
 
 /**
  * Format number as Rupiah (locale-aware)

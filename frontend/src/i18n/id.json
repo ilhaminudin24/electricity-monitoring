@@ -192,7 +192,8 @@
     "daysAgo": "hari yang lalu",
     "hoursAgo": "jam yang lalu",
     "minutesAgo": "menit yang lalu",
-    "justNow": "Baru saja"
+    "justNow": "Baru saja",
+    "latest": "Terbaru"
   },
   "chart": {
     "date": "Tanggal",

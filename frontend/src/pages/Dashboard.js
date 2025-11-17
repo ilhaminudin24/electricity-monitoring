@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getAllReadings } from '../services/firestoreService';
 import { calculateDailyUsage, calculateWeeklyUsage, calculateMonthlyUsage, calculateTokenPrediction } from '../utils/analytics';
@@ -7,7 +7,6 @@ import DailyChart from '../components/charts/DailyChart';
 import WeeklyChart from '../components/charts/WeeklyChart';
 import MonthlyChart from '../components/charts/MonthlyChart';
 import { formatCurrency, formatNumber } from '../utils/localeFormatter';
-import { formatDateTimeLocal } from '../utils/date';
 import { getSettings } from '../utils/settings';
 
 const Dashboard = () => {
@@ -30,84 +29,7 @@ const Dashboard = () => {
   const [prediction, setPrediction] = useState(null);
   const [filteredDailyData, setFilteredDailyData] = useState([]);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  useEffect(() => {
-    // Filter data based on date range
-    filterDataByRange();
-  }, [dateRange, dailyData]);
-
-  const filterDataByRange = () => {
-    if (!dailyData || dailyData.length === 0) {
-      console.log('⚠️ No daily data to filter');
-      setFilteredDailyData([]);
-      return;
-    }
-
-    let filtered = [];
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    if (dateRange === 'today') {
-      // Filter for today only - compare actual dates
-      const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
-      filtered = dailyData.filter(d => d.date === todayStr);
-      console.log(`🔍 Filtering for TODAY (${todayStr}):`, filtered);
-    } else if (dateRange === 'thisMonth') {
-      // Filter for current month
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthStartStr = monthStart.toISOString().split('T')[0];
-      filtered = dailyData.filter(d => d.date >= monthStartStr);
-      console.log(`🔍 Filtering for THIS MONTH (from ${monthStartStr}):`, filtered);
-    } else {
-      // For 7days and 30days - take first N items (already sorted newest first)
-      const days = dateRange === '7days' ? 7 : 30;
-      filtered = dailyData.slice(0, days);
-      console.log(`🔍 Filtering for ${dateRange} (${days} days):`, filtered);
-    }
-
-    setFilteredDailyData(filtered);
-
-    // Calculate stats for filtered data
-    const validUsage = filtered.filter(d => d.usage_kwh > 0);
-    console.log('Valid usage entries:', validUsage);
-    
-    const totalUsage = validUsage.reduce((sum, d) => sum + d.usage_kwh, 0);
-    console.log('Total usage calculated:', totalUsage);
-    
-    // Calculate total cost based on settings tariff
-    const settings = getSettings();
-    const tariffRate = settings.tariffPerKwh || 1444.70;
-    const totalCost = totalUsage * tariffRate;
-
-    // Find highest usage day
-    const highestDay = validUsage.reduce((max, d) => 
-      d.usage_kwh > max.usage ? { date: d.date, usage: d.usage_kwh } : max,
-      { date: null, usage: 0 }
-    );
-
-    // Calculate average
-    const averageUsage = validUsage.length > 0 ? totalUsage / validUsage.length : 0;
-
-    console.log('Setting stats:', {
-      totalUsage: parseFloat(totalUsage.toFixed(2)),
-      totalCost: parseFloat(totalCost.toFixed(2)),
-      highestUsageDay: highestDay,
-      averageDailyUsage: parseFloat(averageUsage.toFixed(2)),
-    });
-
-    setStats(prev => ({
-      ...prev,
-      totalUsage: parseFloat(totalUsage.toFixed(2)),
-      totalCost: parseFloat(totalCost.toFixed(2)),
-      highestUsageDay: highestDay,
-      averageDailyUsage: parseFloat(averageUsage.toFixed(2)),
-    }));
-  };
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -161,7 +83,91 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const filterDataByRange = useCallback(() => {
+    if (!dailyData || dailyData.length === 0) {
+      console.log('⚠️ No daily data to filter');
+      setFilteredDailyData([]);
+      return;
+    }
+
+    let filtered = [];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (dateRange === 'today') {
+      // Filter for today only - compare actual dates
+      const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+      filtered = dailyData.filter(d => d.date === todayStr);
+      
+      // If no data for today, show the most recent day's data instead of 0s
+      if (filtered.length === 0 && dailyData.length > 0) {
+        filtered = [dailyData[0]]; // Take the most recent day
+        console.log(`🔍 No data for TODAY (${todayStr}), showing latest available:`, filtered);
+      } else {
+        console.log(`🔍 Filtering for TODAY (${todayStr}):`, filtered);
+      }
+    } else if (dateRange === 'thisMonth') {
+      // Filter for current month
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthStartStr = monthStart.toISOString().split('T')[0];
+      filtered = dailyData.filter(d => d.date >= monthStartStr);
+      console.log(`🔍 Filtering for THIS MONTH (from ${monthStartStr}):`, filtered);
+    } else {
+      // For 7days and 30days - take first N items (already sorted newest first)
+      const days = dateRange === '7days' ? 7 : 30;
+      filtered = dailyData.slice(0, days);
+      console.log(`🔍 Filtering for ${dateRange} (${days} days):`, filtered);
+    }
+
+    setFilteredDailyData(filtered);
+
+    // Calculate stats for filtered data
+    const validUsage = filtered.filter(d => d.usage_kwh > 0);
+    console.log('Valid usage entries:', validUsage);
+    
+    const totalUsage = validUsage.reduce((sum, d) => sum + d.usage_kwh, 0);
+    console.log('Total usage calculated:', totalUsage);
+    
+    // Calculate total cost based on settings tariff
+    const settings = getSettings();
+    const tariffRate = settings.tariffPerKwh || 1444.70;
+    const totalCost = totalUsage * tariffRate;
+
+    // Find highest usage day
+    const highestDay = validUsage.reduce((max, d) => 
+      d.usage_kwh > max.usage ? { date: d.date, usage: d.usage_kwh } : max,
+      { date: null, usage: 0 }
+    );
+
+    // Calculate average
+    const averageUsage = validUsage.length > 0 ? totalUsage / validUsage.length : 0;
+
+    console.log('Setting stats:', {
+      totalUsage: parseFloat(totalUsage.toFixed(2)),
+      totalCost: parseFloat(totalCost.toFixed(2)),
+      highestUsageDay: highestDay,
+      averageDailyUsage: parseFloat(averageUsage.toFixed(2)),
+    });
+
+    setStats(prev => ({
+      ...prev,
+      totalUsage: parseFloat(totalUsage.toFixed(2)),
+      totalCost: parseFloat(totalCost.toFixed(2)),
+      highestUsageDay: highestDay,
+      averageDailyUsage: parseFloat(averageUsage.toFixed(2)),
+    }));
+  }, [dailyData, dateRange]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    // Filter data based on date range
+    filterDataByRange();
+  }, [dateRange, dailyData, filterDataByRange]);
 
   if (loading) {
     return (
@@ -234,7 +240,9 @@ const Dashboard = () => {
           value={formatNumber(stats.totalUsage, 1)}
           unit={t('units.kwh')}
           subtitle={
-            dateRange === 'today' ? t('time.today') :
+            dateRange === 'today' ? (filteredDailyData.length > 0 && filteredDailyData[0]?.date === new Date().toISOString().split('T')[0] 
+              ? t('time.today') 
+              : `${t('time.latest')}: ${filteredDailyData.length > 0 ? new Date(filteredDailyData[0]?.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : ''}`) :
             dateRange === '7days' ? `7 ${t('dashboard.days')}` :
             dateRange === '30days' ? `30 ${t('dashboard.days')}` :
             t('time.thisMonth')
