@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getAllReadings } from '../services/firestoreService';
 import { calculateDailyUsage, calculateWeeklyUsage, calculateMonthlyUsage, calculateTokenPrediction } from '../utils/analytics';
 import StatCard from '../components/StatCard';
@@ -9,6 +10,7 @@ import { formatRupiah } from '../utils/rupiah';
 import { formatDateTimeLocal } from '../utils/date';
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     monthlyUsage: 0,
@@ -74,7 +76,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading dashboard...</div>
+        <div className="text-gray-500">{t('dashboard.loadingDashboard')}</div>
       </div>
     );
   }
@@ -83,46 +85,46 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-        <p className="text-gray-600 mt-1">Monitor your electricity consumption</p>
+        <h2 className="text-3xl font-bold text-gray-900">{t('dashboard.title')}</h2>
+        <p className="text-gray-600 mt-1">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Highlight Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Monthly Usage"
-          value={`${stats.monthlyUsage} kWh`}
-          subtitle="Current month"
+          title={t('dashboard.monthlyUsage')}
+          value={`${stats.monthlyUsage} ${t('units.kwh')}`}
+          subtitle={t('dashboard.currentMonth')}
           icon="📊"
           color="blue"
         />
         <StatCard
-          title="Daily Average"
-          value={`${stats.dailyAverage} kWh`}
-          subtitle="Last 30 days"
+          title={t('dashboard.dailyAverage')}
+          value={`${stats.dailyAverage} ${t('units.kwh')}`}
+          subtitle={t('dashboard.last30Days')}
           icon="📈"
           color="green"
         />
         <StatCard
-          title="Token Prediction"
+          title={t('dashboard.tokenPrediction')}
           value={
             prediction?.hasToken
               ? prediction.daysUntilDepletion
-                ? `${prediction.daysUntilDepletion} days`
+                ? `${prediction.daysUntilDepletion} ${t('dashboard.days')}`
                 : 'N/A'
-              : 'No token data'
+              : t('dashboard.noTokenData')
           }
           subtitle={
             prediction?.hasToken && prediction.predictedDepletionDate
-              ? `Until ${new Date(prediction.predictedDepletionDate).toLocaleDateString()}`
-              : 'Add token info'
+              ? `${t('dashboard.until')} ${new Date(prediction.predictedDepletionDate).toLocaleDateString()}`
+              : t('dashboard.addTokenInfo')
           }
           icon="🔮"
           color="yellow"
         />
         <StatCard
-          title="Last Input"
-          value={stats.lastInput ? `${stats.lastInput.reading_kwh} kWh` : 'No data'}
+          title={t('dashboard.lastInput')}
+          value={stats.lastInput ? `${stats.lastInput.reading_kwh} ${t('units.kwh')}` : t('dashboard.noData')}
           subtitle={stats.lastInput ? formatDateTimeLocal(stats.lastInput.created_at) : ''}
           icon="📝"
           color="purple"
@@ -132,22 +134,22 @@ const Dashboard = () => {
       {/* Cost Estimation Card */}
       {prediction?.hasToken && prediction.estimatedMonthlyCost && (
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 Cost Estimation</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">💰 {t('dashboard.costEstimation')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-sm text-gray-600">Cost per kWh</p>
+              <p className="text-sm text-gray-600">{t('dashboard.costPerKwh')}</p>
               <p className="text-xl font-bold text-gray-900">
                 {prediction.costPerKwh ? formatRupiah(prediction.costPerKwh) : 'N/A'}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Current Month Usage</p>
+              <p className="text-sm text-gray-600">{t('dashboard.currentMonthUsage')}</p>
               <p className="text-xl font-bold text-gray-900">
-                {prediction.currentMonthUsage} kWh
+                {prediction.currentMonthUsage} {t('units.kwh')}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Estimated Monthly Cost</p>
+              <p className="text-sm text-gray-600">{t('dashboard.estimatedMonthlyCost')}</p>
               <p className="text-xl font-bold text-green-600">
                 {formatRupiah(prediction.estimatedMonthlyCost)}
               </p>
@@ -159,17 +161,17 @@ const Dashboard = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Usage</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard.dailyUsage')}</h3>
           <DailyChart data={dailyData} />
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Usage</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard.weeklyUsage')}</h3>
           <WeeklyChart data={weeklyData} />
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Usage</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard.monthlyUsageChart')}</h3>
         <MonthlyChart data={monthlyData} />
       </div>
     </div>

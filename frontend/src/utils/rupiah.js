@@ -1,12 +1,14 @@
 /**
  * Indonesian Rupiah formatting utilities
- * Locale: id-ID
+ * Now uses locale-aware formatting
  */
 
+import { formatCurrency, getCurrentLocale, parseFormattedNumber } from './localeFormatter';
+
 /**
- * Format number as Indonesian Rupiah
+ * Format number as Rupiah (locale-aware)
  * @param {number|string} amount - The amount to format
- * @returns {string} Formatted string like "Rp 200.000"
+ * @returns {string} Formatted string like "Rp 200.000" (ID) or "Rp 200,000" (EN)
  */
 export const formatRupiah = (amount) => {
   if (amount === null || amount === undefined || amount === '') {
@@ -19,12 +21,7 @@ export const formatRupiah = (amount) => {
     return '-';
   }
 
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
+  return formatCurrency(num, true);
 };
 
 /**
@@ -35,15 +32,13 @@ export const formatRupiah = (amount) => {
 export const parseRupiah = (rupiahString) => {
   if (!rupiahString) return 0;
   
-  // Remove all non-digit characters
-  const cleaned = rupiahString.toString().replace(/[^\d]/g, '');
-  return cleaned ? parseFloat(cleaned) : 0;
+  return parseFormattedNumber(rupiahString);
 };
 
 /**
  * Format number for input field (without currency symbol, with thousand separators)
  * @param {number|string} amount - The amount to format
- * @returns {string} Formatted string like "200.000"
+ * @returns {string} Formatted string like "200.000" (ID) or "200,000" (EN)
  */
 export const formatRupiahInput = (amount) => {
   if (!amount && amount !== 0) return '';
@@ -52,9 +47,6 @@ export const formatRupiahInput = (amount) => {
   
   if (isNaN(num)) return '';
   
-  return new Intl.NumberFormat('id-ID', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
+  return formatCurrency(num, false);
 };
 

@@ -1,12 +1,15 @@
 /**
  * Date utility functions that preserve local time without timezone conversion
  * All dates are treated as local time, never converted to UTC
+ * Now supports locale-aware formatting
  */
 
+import { formatDateTime as formatDateTimeLocale, getCurrentLocale } from './localeFormatter';
+
 /**
- * Format datetime to Indonesian locale format
+ * Format datetime to locale format
  * Input: Date object, Firestore Timestamp, ISO string, or SQLite format
- * Output: "16 Nov 2025, 19:00" (id-ID format)
+ * Output: "16 Nov 2025, 19:00" (id-ID) or "Nov 16, 2025, 7:00 PM" (en-US)
  */
 export const formatDateTimeLocal = (dateInput) => {
   if (!dateInput) return 'N/A';
@@ -51,15 +54,8 @@ export const formatDateTimeLocal = (dateInput) => {
 
     if (isNaN(date.getTime())) return 'N/A';
 
-    // Format using Indonesian locale
-    return new Intl.DateTimeFormat('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(date);
+    // Use locale-aware formatting
+    return formatDateTimeLocale(date);
   } catch (error) {
     console.error('Error formatting date:', error);
     return 'N/A';
@@ -67,7 +63,7 @@ export const formatDateTimeLocal = (dateInput) => {
 };
 
 /**
- * Format date only (without time) to Indonesian locale
+ * Format date only (without time) to locale format
  */
 export const formatDateLocal = (dateString) => {
   if (!dateString) return 'N/A';
@@ -77,7 +73,8 @@ export const formatDateLocal = (dateString) => {
     const [year, month, day] = datePart.split('-').map(Number);
     const date = new Date(year, month - 1, day);
 
-    return new Intl.DateTimeFormat('id-ID', {
+    const locale = getCurrentLocale();
+    return new Intl.DateTimeFormat(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

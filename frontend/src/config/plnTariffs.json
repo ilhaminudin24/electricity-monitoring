@@ -1,0 +1,192 @@
+{
+  "tariffGroups": [
+    {
+      "id": "R1",
+      "name": "R1 - Rumah Tangga",
+      "description": "Residential household tariff",
+      "subcategories": [
+        {
+          "id": "R1_450",
+          "name": "450 VA (Subsidized)",
+          "power": "450 VA",
+          "rate": 415,
+          "isSubsidized": true
+        },
+        {
+          "id": "R1_900",
+          "name": "900 VA",
+          "power": "900 VA",
+          "rate": 1352,
+          "isSubsidized": false
+        },
+        {
+          "id": "R1_1300",
+          "name": "1300 VA",
+          "power": "1300 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        },
+        {
+          "id": "R1_2200",
+          "name": "2200 VA",
+          "power": "2200 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        }
+      ]
+    },
+    {
+      "id": "R1M",
+      "name": "R1M - Rumah Tangga Mampu",
+      "description": "Non-subsidized household",
+      "subcategories": [
+        {
+          "id": "R1M_900",
+          "name": "900 VA",
+          "power": "900 VA",
+          "rate": 1352,
+          "isSubsidized": false
+        },
+        {
+          "id": "R1M_1300",
+          "name": "1300 VA",
+          "power": "1300 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        },
+        {
+          "id": "R1M_2200",
+          "name": "2200 VA",
+          "power": "2200 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        }
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "R2 - Rumah Tangga",
+      "description": "Higher residential power",
+      "subcategories": [
+        {
+          "id": "R2_3500",
+          "name": "3500 VA",
+          "power": "3500 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        },
+        {
+          "id": "R2_4400",
+          "name": "4400 VA",
+          "power": "4400 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        },
+        {
+          "id": "R2_5500",
+          "name": "5500 VA",
+          "power": "5500 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        }
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "R3 - Rumah Tangga",
+      "description": "Premium residential",
+      "subcategories": [
+        {
+          "id": "R3_6600",
+          "name": "6600 VA",
+          "power": "6600 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        },
+        {
+          "id": "R3_7700",
+          "name": "7700+ VA",
+          "power": "7700+ VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        }
+      ]
+    },
+    {
+      "id": "B1",
+      "name": "B1 - Bisnis Kecil",
+      "description": "Small business",
+      "subcategories": [
+        {
+          "id": "B1_450",
+          "name": "450 VA",
+          "power": "450 VA",
+          "rate": 1114.74,
+          "isSubsidized": false
+        },
+        {
+          "id": "B1_900",
+          "name": "900 VA",
+          "power": "900 VA",
+          "rate": 1114.74,
+          "isSubsidized": false
+        },
+        {
+          "id": "B1_1300",
+          "name": "1300 VA",
+          "power": "1300 VA",
+          "rate": 1114.74,
+          "isSubsidized": false
+        },
+        {
+          "id": "B1_2200",
+          "name": "2200 VA",
+          "power": "2200 VA",
+          "rate": 1114.74,
+          "isSubsidized": false
+        }
+      ]
+    },
+    {
+      "id": "B2",
+      "name": "B2 - Bisnis Menengah",
+      "description": "Medium business",
+      "subcategories": [
+        {
+          "id": "B2_3500",
+          "name": "3500-5500 VA",
+          "power": "3500-5500 VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        },
+        {
+          "id": "B2_6600",
+          "name": "6600+ VA",
+          "power": "6600+ VA",
+          "rate": 1444.70,
+          "isSubsidized": false
+        }
+      ]
+    },
+    {
+      "id": "P1",
+      "name": "P1 - Pemerintah",
+      "description": "Government/Public facilities",
+      "subcategories": [
+        {
+          "id": "P1_all",
+          "name": "All Power Levels",
+          "power": "Any VA",
+          "rate": 1522.00,
+          "isSubsidized": false
+        }
+      ]
+    }
+  ],
+  "customTariff": {
+    "id": "CUSTOM",
+    "name": "Custom Tariff",
+    "description": "Define your own tariff rate",
+    "allowCustomRate": true
+  }
+}

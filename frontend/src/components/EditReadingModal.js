@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatRupiah, parseRupiah, formatRupiahInput } from '../utils/rupiah';
 import { calculateTokenAmount } from '../utils/settings';
 import { toDateTimeLocalInput, fromDateTimeLocalInput } from '../utils/date';
 
 const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     reading_kwh: '',
     token_cost: '',
@@ -93,19 +95,19 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
 
     // Validate required field
     if (!formData.reading_kwh || formData.reading_kwh === '') {
-      setError('Meter reading (kWh) is required');
+      setError(t('input.validation.meterReadingRequired'));
       return;
     }
 
     // Validate numeric fields
     if (formData.reading_kwh && isNaN(parseFloat(formData.reading_kwh))) {
-      setError('Meter reading must be a valid number');
+      setError(t('input.validation.meterReadingInvalid'));
       return;
     }
 
     const tokenCostNumeric = formData.token_cost ? parseRupiah(formData.token_cost) : null;
     if (tokenCostNumeric !== null && (isNaN(tokenCostNumeric) || tokenCostNumeric < 0)) {
-      setError('Token cost must be a valid number');
+      setError(t('input.validation.tokenCostInvalid'));
       return;
     }
 
@@ -127,7 +129,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
       await onSave(reading.id, payload);
       onClose();
     } catch (err) {
-      setError(err.message || 'Failed to update reading. Please try again.');
+      setError(err.message || t('history.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -140,7 +142,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Edit Reading</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('history.editReading')}</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
@@ -160,7 +162,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="created_at" className="block text-sm font-medium text-gray-700">
-                Date & Time <span className="text-red-500">*</span>
+                {t('history.date')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="datetime-local"
@@ -175,7 +177,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
 
             <div>
               <label htmlFor="reading_kwh" className="block text-sm font-medium text-gray-700">
-                Meter Reading (kWh) <span className="text-red-500">*</span>
+                {t('input.meterReading')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -186,13 +188,13 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
                 onChange={handleChange}
                 required
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 border"
-                placeholder="Enter current meter reading"
+                placeholder={t('input.meterReadingPlaceholder')}
               />
             </div>
 
             <div>
               <label htmlFor="token_cost" className="block text-sm font-medium text-gray-700">
-                Token Cost (Rupiah) <span className="text-gray-400 text-xs">(optional)</span>
+                {t('input.tokenCost')} <span className="text-gray-400 text-xs">({t('common.optional')})</span>
               </label>
               <div className="mt-1 relative">
                 <input
@@ -202,7 +204,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
                   value={formData.token_cost}
                   onChange={handleChange}
                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 border pr-20"
-                  placeholder="Enter token cost (e.g., 200000)"
+                  placeholder={t('input.tokenCostPlaceholder')}
                 />
                 {formData.token_cost_display && (
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -214,7 +216,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
 
             <div>
               <label htmlFor="token_amount" className="block text-sm font-medium text-gray-700">
-                Token Amount (kWh) <span className="text-gray-400 text-xs">(auto-calculated)</span>
+                {t('input.tokenAmount')} <span className="text-gray-400 text-xs">({t('input.autoCalculated')})</span>
               </label>
               <div className="mt-1 relative">
                 <input
@@ -225,11 +227,11 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
                   readOnly
                   disabled
                   className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm px-3 py-2 border bg-gray-50 text-gray-600 cursor-not-allowed"
-                  placeholder="Will be calculated automatically"
+                  placeholder={t('input.tokenAmountPlaceholder')}
                 />
                 {calculatedTokenAmount && (
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <span className="text-green-600 text-sm font-medium">✓ Calculated</span>
+                    <span className="text-green-600 text-sm font-medium">✓ {t('input.calculated')}</span>
                   </div>
                 )}
               </div>
@@ -237,7 +239,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
 
             <div>
               <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                Notes <span className="text-gray-400 text-xs">(optional)</span>
+                {t('input.notes')} <span className="text-gray-400 text-xs">({t('common.optional')})</span>
               </label>
               <textarea
                 id="notes"
@@ -246,7 +248,7 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
                 value={formData.notes}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 border"
-                placeholder="Add any additional notes..."
+                placeholder={t('input.notesPlaceholder')}
               />
             </div>
 
@@ -256,14 +258,14 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
                 onClick={onClose}
                 className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? t('common.saving') : t('history.updateReading')}
               </button>
             </div>
           </form>

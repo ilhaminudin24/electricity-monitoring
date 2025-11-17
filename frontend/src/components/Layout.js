@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Layout = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { t } = useTranslation();
 
   const isActive = (path) => location.pathname === path;
 
   const navItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/input', label: 'Input Reading', icon: '➕' },
-    { path: '/history', label: 'History', icon: '📋' },
-    { path: '/settings', label: 'Settings', icon: '⚙️' },
+    { path: '/', label: t('nav.dashboard'), icon: '📊' },
+    { path: '/input', label: t('nav.inputReading'), icon: '➕' },
+    { path: '/history', label: t('nav.history'), icon: '📋' },
+    { path: '/settings', label: t('nav.settings'), icon: '⚙️' },
   ];
 
   return (
@@ -42,8 +45,14 @@ const Layout = ({ children }) => {
                 ))}
               </div>
             </div>
+            {/* Language Switcher - Desktop */}
+            <div className="hidden md:flex md:items-center md:ml-6">
+              <LanguageSwitcher />
+            </div>
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center">
+            <div className="md:hidden flex items-center gap-2">
+              {/* Language Switcher - Mobile */}
+              <LanguageSwitcher />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
