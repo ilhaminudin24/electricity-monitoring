@@ -136,10 +136,17 @@ export function AuthProvider({ children }) {
       // as it's the standard expectation for social login
       localStorage.setItem('remember_me', 'true');
 
+      // Determine redirect URL based on environment
+      // In production (GitHub Pages), we need the base path (e.g., /electricity-monitoring/)
+      // In development (localhost), we usually run at root /
+      const redirectPath = import.meta.env.PROD
+        ? `${import.meta.env.BASE_URL}auth/callback`
+        : '/auth/callback';
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}${redirectPath}`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
