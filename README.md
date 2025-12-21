@@ -4,63 +4,55 @@ A personal web application for recording electricity meter readings (KWh) and pr
 
 ## Features
 
-- **Manual Input**:** Record meter readings with optional token information
-- **Local Storage**: SQLite database for permanent data storage
+- **Manual Input**: Record meter readings with optional token information
+- **Cloud Storage**: Supabase PostgreSQL database for permanent data storage
+- **Authentication**: Email/Password and Google OAuth login
 - **Analytics Dashboard**: View daily, weekly, and monthly usage patterns
 - **Cost Estimation**: Calculate costs based on token purchases
 - **Token Prediction**: Predict when your token will be depleted
+- **Multi-Language**: Support for English and Indonesian (i18n)
 - **Modern UI**: Responsive, mobile-friendly interface built with React and TailwindCSS
-- **No Authentication**: Simple single-user system
 
 ## Tech Stack
-
-### Backend
-- Node.js + Express
-- SQLite3
-- RESTful API
 
 ### Frontend
 - React 18
 - TailwindCSS
 - Recharts (for data visualization)
-- React Router
-- Axios
+- React Router v6
+- Framer Motion (animations)
+- i18next (internationalization)
+
+### Backend/Database
+- Supabase (PostgreSQL + Auth + Storage)
 
 ## Project Structure
 
 ```
 .
-├── backend/
-│   ├── database/
-│   │   └── db.js              # Database initialization and connection
-│   ├── routes/
-│   │   ├── readings.js        # CRUD endpoints for readings
-│   │   └── analytics.js       # Analytics endpoints
-│   ├── server.js              # Express server setup
-│   └── package.json
 ├── frontend/
 │   ├── public/
 │   │   └── index.html
 │   ├── src/
-│   │   ├── api/
-│   │   │   └── client.js      # API client configuration
-│   │   ├── components/
-│   │   │   ├── Layout.js      # Navigation layout
-│   │   │   ├── StatCard.js    # Dashboard stat cards
-│   │   │   └── charts/
-│   │   │       ├── DailyChart.js
-│   │   │       ├── WeeklyChart.js
-│   │   │       └── MonthlyChart.js
-│   │   ├── pages/
-│   │   │   ├── Dashboard.js   # Main dashboard
-│   │   │   ├── InputForm.js   # Input form page
-│   │   │   └── History.js     # History table page
+│   │   ├── components/       # Reusable UI components
+│   │   ├── contexts/         # React contexts (Auth)
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── i18n/             # Internationalization files
+│   │   ├── pages/            # Page components
+│   │   │   └── cms/          # CMS editor pages
+│   │   ├── services/         # Service layers
+│   │   │   ├── supabaseService.js
+│   │   │   ├── cmsService.js
+│   │   │   └── tariffService.js
+│   │   ├── utils/            # Utility functions
 │   │   ├── App.js
 │   │   ├── index.js
-│   │   └── index.css
+│   │   ├── index.css
+│   │   └── supabaseClient.js
 │   ├── package.json
 │   ├── tailwind.config.js
 │   └── postcss.config.js
+├── scripts/                  # Migration scripts
 └── README.md
 ```
 
@@ -69,32 +61,9 @@ A personal web application for recording electricity meter readings (KWh) and pr
 ### Prerequisites
 - Node.js (v14 or higher)
 - npm or yarn
+- Supabase account
 
-### Backend Setup
-
-1. Navigate to the backend directory:
-```bash
-cd backend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the server:
-```bash
-npm start
-```
-
-For development with auto-reload:
-```bash
-npm run dev
-```
-
-The backend server will run on `http://localhost:5000`
-
-### Frontend Setup
+### Setup
 
 1. Navigate to the frontend directory:
 ```bash
@@ -106,74 +75,42 @@ cd frontend
 npm install
 ```
 
-3. Start the development server:
+3. Create environment file:
+```bash
+cp .env.supabase.example .env.local
+```
+
+4. Configure Supabase credentials in `.env.local`:
+```
+REACT_APP_SUPABASE_URL=your_supabase_url
+REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+5. Start the development server:
 ```bash
 npm start
 ```
 
-The frontend will run on `http://localhost:3000` and automatically open in your browser.
+The frontend will run on `http://localhost:3000`
 
-### Environment Variables (Optional)
+## Deployment
 
-Create a `.env` file in the frontend directory to customize the API URL:
+### GitHub Pages
 
+Deploy to GitHub Pages:
+```bash
+npm run deploy
 ```
-REACT_APP_API_URL=http://localhost:5000/api
-```
 
-## API Endpoints
-
-### Readings
-- `POST /api/readings` - Create a new meter reading
-- `GET /api/readings` - Get all readings (optional query: `?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`)
-- `GET /api/readings/latest` - Get the most recent reading
-
-### Analytics
-- `GET /api/analytics/daily?days=30` - Get daily usage analytics
-- `GET /api/analytics/weekly?weeks=12` - Get weekly usage analytics
-- `GET /api/analytics/monthly?months=12` - Get monthly usage analytics
-- `GET /api/analytics/prediction` - Get token depletion prediction and cost analytics
-
-## Database Schema
-
-### Table: `meter_readings`
-
-| Field         | Type            | Description                    |
-|---------------|-----------------|--------------------------------|
-| id            | INTEGER (PK)    | Unique identifier              |
-| reading_kwh   | REAL            | Current meter reading (required)|
-| token_amount  | REAL (nullable) | Purchased token amount         |
-| token_cost    | REAL (nullable) | Cost of token                  |
-| notes         | TEXT (nullable) | Additional remarks             |
-| created_at    | DATETIME        | Auto timestamp                 |
+This will build the app and push to the `gh-pages` branch.
 
 ## Usage
 
-1. **Input Reading**: Navigate to "Input Reading" page and enter your meter reading. Optionally add token information and notes.
-
-2. **View Dashboard**: The dashboard shows:
-   - Monthly usage summary
-   - Daily average consumption
-   - Token depletion prediction
-   - Last input summary
-   - Cost estimation (if token cost is provided)
-   - Interactive charts for daily, weekly, and monthly usage
-
-3. **View History**: Check the "History" page to see all recorded readings in a table format.
-
-## Development
-
-### Adding New Features
-
-The codebase is structured to be easily extensible:
-
-- **Backend**: Add new routes in `backend/routes/` and register them in `server.js`
-- **Frontend**: Add new pages in `frontend/src/pages/` and components in `frontend/src/components/`
-- **API**: Extend the API client in `frontend/src/api/client.js`
-
-### Database Migrations
-
-The database is automatically initialized on first run. To modify the schema, update the `createTables()` function in `backend/database/db.js`.
+1. **Register/Login**: Create an account or login with email/Google
+2. **Input Reading**: Navigate to "Input Reading" page and enter your meter reading
+3. **View Dashboard**: See monthly usage, daily average, and charts
+4. **View History**: Check all recorded readings in a table format
+5. **Settings**: Configure tariff rates and preferences
 
 ## License
 
@@ -181,7 +118,6 @@ ISC
 
 ## Notes
 
-- The database file (`electricity_monitoring.db`) is created automatically in the `backend/database/` directory
-- All data is stored locally - no external services required
-- The application is designed for personal use with no authentication
-
+- All data is stored in Supabase cloud database
+- Authentication is handled by Supabase Auth
+- The application supports multiple devices with cloud sync

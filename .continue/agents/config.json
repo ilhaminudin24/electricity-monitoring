@@ -1,0 +1,16 @@
+{
+  "models": [
+    {
+      "title": "Qwen 2.5 Coder",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:latest",
+      "apiBase": "http://localhost:11434"
+    }
+  ],
+  "contextProviders": [
+    "local",
+    "file",
+    "terminal",
+    "procedures"
+  ]
+}

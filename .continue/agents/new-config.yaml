@@ -1,0 +1,25 @@
+name: Local Assistant
+version: 1.0.0
+schema: v1
+
+models:
+  - name: qwen2.5-coder-14b
+    provider: ollama
+    model: qwen2.5-coder:14b
+    roles:
+      - chat
+      - edit
+      - autocomplete
+
+context:
+  - provider: folder
+    params:
+      root: ${workspaceFolder}
+      maxDepth: 8
+
+  - provider: file
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
