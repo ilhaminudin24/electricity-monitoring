@@ -2,32 +2,25 @@
   "name": "electricity-monitoring-frontend",
   "version": "1.0.0",
   "description": "Frontend for electricity monitoring application",
-  "homepage": "https://ilhaminudin24.github.io/electricity-monitoring",
   "private": true,
   "dependencies": {
+    "@supabase/supabase-js": "^2.86.2",
+    "date-fns": "^2.30.0",
+    "dotenv": "^17.2.3",
+    "framer-motion": "^12.23.25",
+    "i18next": "^23.7.6",
+    "i18next-browser-languagedetector": "^7.2.0",
+    "lucide-react": "^0.556.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0",
-    "react-scripts": "5.0.1",
-    "firebase": "^10.7.1",
-    "recharts": "^2.10.3",
-    "date-fns": "^2.30.0",
-    "i18next": "^23.7.6",
     "react-i18next": "^13.5.0",
-    "i18next-browser-languagedetector": "^7.2.0"
+    "react-router-dom": "^6.20.0",
+    "recharts": "^2.10.3"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app"
-    ]
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "browserslist": {
     "production": [
@@ -42,9 +35,11 @@
     ]
   },
   "devDependencies": {
-    "tailwindcss": "^3.3.6",
+    "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.16",
+    "gh-pages": "^6.1.0",
     "postcss": "^8.4.32",
-    "gh-pages": "^6.1.0"
+    "tailwindcss": "^3.3.6",
+    "vite": "^7.3.0"
   }
 }
