@@ -5,8 +5,10 @@
   <title>Redirecting...</title>
   <script>
     // GitHub Pages SPA redirect workaround
-    // Store the current path and redirect to index.html
-    sessionStorage.setItem('redirectPath', window.location.pathname);
+    // Store the FULL URL (including hash and query params) and redirect to index.html
+    // This is critical for OAuth callbacks which may contain #access_token or ?code
+    var fullPath = window.location.pathname + window.location.search + window.location.hash;
+    sessionStorage.setItem('redirectPath', fullPath);
     window.location.replace('/electricity-monitoring/');
   </script>
 </head>
@@ -14,3 +16,4 @@
   <p>Redirecting...</p>
 </body>
 </html>
+
