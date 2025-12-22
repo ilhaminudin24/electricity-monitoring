@@ -47,12 +47,7 @@ export default function ForgotPassword() {
       <AuthCard>
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-              <Zap className="h-6 w-6 fill-current" />
-            </div>
-            <span className="ml-2 text-2xl font-bold text-text-main tracking-tight">VoltMonitor</span>
-          </div>
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-12 object-contain" />
         </div>
 
         {!emailSent ? (

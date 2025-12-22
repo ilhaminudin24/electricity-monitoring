@@ -38,16 +38,8 @@ const VoltaicSidebar = ({ isOpen, onClose }) => {
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-white dark:bg-background-dark border-r border-gray-200 dark:border-gray-800 transition-colors duration-200">
             {/* Header / Logo */}
-            <div className="p-6 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white shadow-glow">
-                    <Zap className="w-6 h-6 fill-current" />
-                </div>
-                <div>
-                    <h1 className="text-base font-bold leading-tight text-text-main dark:text-white">
-                        Voltaic<span className="text-primary">Monitor</span>
-                    </h1>
-                    <p className="text-xs text-text-sub">v2.4.0</p>
-                </div>
+            <div className="p-6 flex items-center">
+                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-10 object-contain" />
             </div>
 
             {/* Navigation */}

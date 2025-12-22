@@ -200,7 +200,7 @@
     },
     "settings": {
         "title": "Pengaturan & Konfigurasi",
-        "subtitle": "Kelola tarif sistem, konfigurasi pajak, dan pengaturan profil administrator Anda.",
+        "subtitle": "Kelola profil Anda.",
         "home": "Beranda",
         "breadcrumb": "Pengaturan & Tarif",
         "baseRatesFees": "Tarif Dasar & Biaya",
@@ -256,7 +256,7 @@
         "features": {
             "title": "Fitur",
             "subtitle": "Semua yang Anda Butuhkan untuk Mengelola Listrik",
-            "description": "VoltMonitor memberikan semua yang Anda butuhkan untuk memahami pola konsumsi dan mengoptimalkan pengeluaran listrik.",
+            "description": "CatatToken.ID memberikan semua yang Anda butuhkan untuk memahami pola konsumsi dan mengoptimalkan pengeluaran listrik.",
             "feature1Title": "Dashboard Analitik",
             "feature1Desc": "Visualisasi konsumsi dengan chart premium. Pantau pola pemakaian harian, mingguan, atau bulanan dengan desain glassmorphism.",
             "feature2Title": "Prediksi Token",
@@ -295,7 +295,7 @@
             "contact": "Hubungi Kami",
             "privacy": "Kebijakan Privasi",
             "terms": "Syarat & Ketentuan",
-            "copyright": "© 2025 VoltMonitor. Semua hak dilindungi.",
+            "copyright": "© 2025 CatatToken.ID. Semua hak dilindungi.",
             "madeWith": "Dibuat dengan ❤️ di Indonesia"
         }
     }

@@ -89,18 +89,23 @@ const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], tim
         // Use dailyData which has meterValue from computeDailyUsage
         const sorted = [...dailyData].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // Filter based on timeRange
+        // Filter based on timeRange - align with Consumption Trends chart
         let filtered = sorted;
         if (timeRange === 'day') {
-            filtered = sorted.slice(-7); // Last 7 days for day view
+            // Match Consumption Trends: Today vs Yesterday
+            // Fallback: Show last 3 days (not 7) to keep it visually "daily" and distinct from Week view even with sparse data
+            filtered = hasTodayData ? sorted.slice(-2) : sorted.slice(-3);
         } else if (timeRange === 'week') {
-            filtered = sorted.slice(-30); // Last 30 days for week view
+            // Match Consumption Trends: Last 12 Weeks (~84 days)
+            // Shows full daily history for the period covered by weekly bars
+            filtered = sorted.slice(-84);
         } else {
-            filtered = sorted.slice(-60); // Last 60 days for month view 
+            // Match Consumption Trends: Last 12 Months (~365 days)
+            filtered = sorted.slice(-365);
         }
 
         return filtered.filter(d => d.meterValue !== null && d.meterValue !== undefined);
-    }, [dailyData, timeRange]);
+    }, [dailyData, timeRange, hasTodayData]);
 
     // Custom Tick Formatter - handles different views
     const formatXAxis = (tickItem, payload) => {

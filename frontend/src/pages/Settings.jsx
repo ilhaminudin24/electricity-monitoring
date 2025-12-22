@@ -186,7 +186,7 @@ const Settings = () => {
           {t('settings.title', 'Settings & Configuration')}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-base font-normal leading-relaxed max-w-2xl">
-          {t('settings.subtitle', 'Manage system-wide tariff rates, tax configurations, and your administrator profile settings.')}
+          {t('settings.subtitle', 'Manages your profile settings.')}
         </p>
       </div>
 

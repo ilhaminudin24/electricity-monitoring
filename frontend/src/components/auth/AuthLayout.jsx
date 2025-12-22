@@ -16,13 +16,10 @@ const AuthLayout = ({ children }) => {
             {/* Top Left: Home Link / Logo */}
             <Link
                 to="/"
-                className="absolute top-6 left-6 z-20 flex items-center gap-3 text-text-main hover:text-primary transition-colors group"
+                className="absolute top-6 left-6 z-20 flex items-center text-text-main hover:text-primary transition-colors group"
                 aria-label="Back to Home"
             >
-                <div className="w-10 h-10 bg-white shadow-soft rounded-xl flex items-center justify-center text-primary group-hover:scale-105 transition-transform border border-gray-100">
-                    <Zap className="h-5 w-5 fill-current" />
-                </div>
-                <span className="font-bold text-xl tracking-tight hidden sm:block group-hover:text-primary/90">VoltMonitor</span>
+                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-10 object-contain group-hover:scale-105 transition-transform" />
             </Link>
 
             {/* Top Right: Language Switcher */}
@@ -42,7 +39,7 @@ const AuthLayout = ({ children }) => {
 
             {/* Footer */}
             <div className="absolute bottom-6 w-full text-center pointer-events-none">
-                <p className="text-gray-400 text-xs font-medium">© 2024 VoltMonitor. All rights reserved.</p>
+                <p className="text-gray-400 text-xs font-medium">© 2025 CatatToken.ID. All rights reserved.</p>
             </div>
         </div>
     );

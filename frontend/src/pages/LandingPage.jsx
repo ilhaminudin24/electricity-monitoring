@@ -117,11 +117,8 @@ const LandingPage = React.memo(() => {
         <div className="max-w-7xl mx-auto px-4 md:px-10">
           <div className="flex items-center justify-between h-[72px]">
             {/* Logo */}
-            <div className="flex items-center gap-3 cursor-pointer">
-              <div className="w-8 h-8 text-primary flex items-center justify-center rounded-lg bg-primary/10">
-                <Zap className="w-5 h-5 fill-current" />
-              </div>
-              <h2 className="text-xl font-bold tracking-tight text-text-main">VoltMonitor</h2>
+            <div className="flex items-center cursor-pointer">
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-8 object-contain" />
             </div>
 
             {/* Desktop Menu */}
@@ -326,7 +323,7 @@ const LandingPage = React.memo(() => {
                   {t('landingPage.features.subtitle')}
                 </h3>
                 <p className="text-text-sub text-lg leading-relaxed">
-                  {t('landingPage.features.description', 'VoltMonitor memberikan semua yang Anda butuhkan untuk memahami pola konsumsi dan mengoptimalkan pengeluaran listrik.')}
+                  {t('landingPage.features.description', 'CatatToken.ID memberikan semua yang Anda butuhkan untuk memahami pola konsumsi dan mengoptimalkan pengeluaran listrik.')}
                 </p>
               </motion.div>
 
@@ -526,11 +523,8 @@ const LandingPage = React.memo(() => {
 
             {/* Brand Column */}
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-text-main">
-                <div className="w-6 h-6 text-primary flex items-center justify-center">
-                  <Zap className="w-5 h-5 fill-current" />
-                </div>
-                <h2 className="text-lg font-bold">VoltMonitor</h2>
+              <div className="flex items-center text-text-main">
+                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-6 object-contain" />
               </div>
               <p className="text-text-sub text-sm leading-relaxed">
                 {t('landingPage.footer.tagline', 'Aplikasi monitoring listrik prabayar untuk pengguna Indonesia.')}
@@ -549,7 +543,7 @@ const LandingPage = React.memo(() => {
             <div className="flex flex-col gap-3">
               <h4 className="text-text-main font-bold mb-1">{t('landingPage.footer.support', 'Dukungan')}</h4>
               <a href="#how-it-works" className="text-text-sub hover:text-primary transition-colors text-sm">{t('landingPage.howItWorks.title')}</a>
-              <a href="mailto:support@voltmonitor.app" className="text-text-sub hover:text-primary transition-colors text-sm">{t('landingPage.footer.contact', 'Hubungi Kami')}</a>
+              <a href="mailto:support@catattoken.id" className="text-text-sub hover:text-primary transition-colors text-sm">{t('landingPage.footer.contact', 'Hubungi Kami')}</a>
             </div>
 
             {/* Legal Links */}

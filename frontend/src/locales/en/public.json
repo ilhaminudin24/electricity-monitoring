@@ -200,7 +200,7 @@
     },
     "settings": {
         "title": "Settings & Configuration",
-        "subtitle": "Manage system-wide tariff rates, tax configurations, and your administrator profile settings.",
+        "subtitle": "Manage your profile settings.",
         "home": "Home",
         "breadcrumb": "Settings & Tariff",
         "baseRatesFees": "Base Rates & Fees",
@@ -256,7 +256,7 @@
         "features": {
             "title": "Features",
             "subtitle": "Everything You Need to Manage Your Electricity",
-            "description": "VoltMonitor provides all the tools you need to understand consumption patterns and optimize your electricity spending.",
+            "description": "CatatToken.ID provides all the tools you need to understand consumption patterns and optimize your electricity spending.",
             "feature1Title": "Analytics Dashboard",
             "feature1Desc": "Visualize your consumption with premium charts. Track usage patterns daily, weekly, or monthly with glassmorphism design.",
             "feature2Title": "Token Prediction",
@@ -295,7 +295,7 @@
             "contact": "Contact Us",
             "privacy": "Privacy Policy",
             "terms": "Terms & Conditions",
-            "copyright": "© 2025 VoltMonitor. All rights reserved.",
+            "copyright": "© 2025 CatatToken.ID. All rights reserved.",
             "madeWith": "Made with ❤️ in Indonesia"
         }
     }
