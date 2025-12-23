@@ -655,3 +655,65 @@ export const deleteReading = async (readingId) => {
         throw error;
     }
 };
+
+// Get all readings AFTER a specific date (for backdate recalculation)
+// Returns readings sorted by date ascending (oldest first)
+// Used when user backdates a top-up and we need to adjust subsequent readings
+export const getReadingsAfterDate = async (userId, afterDate) => {
+    try {
+        // Extract only the DATE part (YYYY-MM-DD)
+        const dateObj = new Date(afterDate);
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const dateOnly = `${year}-${month}-${day}`;
+
+        const { data, error } = await supabase
+            .from('electricity_readings')
+            .select('*')
+            .eq('user_id', userId)
+            .gt('date', dateOnly) // Strictly AFTER this date
+            .order('date', { ascending: true }); // Oldest first
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error fetching readings after date:', error);
+        throw error;
+    }
+};
+
+// Bulk update multiple readings' kwh_value
+// Used for backdate recalculation - adds offset to all affected readings
+// @param updates - Array of { id, kwh_value }
+export const bulkUpdateReadingsKwh = async (updates) => {
+    try {
+        if (!updates || updates.length === 0) {
+            return [];
+        }
+
+        // Use Promise.all for parallel updates
+        const results = await Promise.all(
+            updates.map(({ id, kwh_value }) =>
+                supabase
+                    .from('electricity_readings')
+                    .update({ kwh_value: parseFloat(kwh_value) })
+                    .eq('id', id)
+                    .select()
+                    .single()
+            )
+        );
+
+        // Check for errors
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) {
+            console.error('Bulk update errors:', errors);
+            throw new Error(`Failed to update ${errors.length} of ${updates.length} readings`);
+        }
+
+        return results.map(r => r.data);
+    } catch (error) {
+        console.error('Error in bulk update:', error);
+        throw error;
+    }
+};

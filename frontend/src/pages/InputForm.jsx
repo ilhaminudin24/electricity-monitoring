@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { addReading, getLastReading, getLastReadingBeforeDate, checkReadingExists, deleteReading, updateReading } from '../services/supabaseService';
+import { addReading, getLastReading, getLastReadingBeforeDate, checkReadingExists, deleteReading, updateReading, getReadingsAfterDate, bulkUpdateReadingsKwh } from '../services/supabaseService';
 import DuplicateDateModal from '../components/DuplicateDateModal';
+import BackdateRecalculationModal from '../components/BackdateRecalculationModal';
 import EditReadingModal from '../components/EditReadingModal';
 import { formatRupiah, parseRupiah, formatRupiahInput } from '../utils/rupiah';
 import { toDateTimeLocalInput, fromDateTimeLocalInput } from '../utils/date';
@@ -29,6 +30,13 @@ const InputForm = () => {
     notes: '',
   });
 
+  // Date validation: max = today, min = 30 days ago
+  const maxDate = new Date();
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() - 30);
+  const maxDateStr = toDateTimeLocalInput(maxDate);
+  const minDateStr = toDateTimeLocalInput(minDate);
+
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [error, setError] = useState('');
@@ -48,6 +56,11 @@ const InputForm = () => {
   const [validationHint, setValidationHint] = useState(null);
   const [showAnomalyModal, setShowAnomalyModal] = useState(false);
   const [anomalyDetails, setAnomalyDetails] = useState(null);
+
+  // Backdate recalculation state
+  const [showRecalculationModal, setShowRecalculationModal] = useState(false);
+  const [affectedReadings, setAffectedReadings] = useState([]);
+  const [kwhOffset, setKwhOffset] = useState(0);
 
   // Fetch last reading BEFORE the selected date (date-aware validation)
   // This ensures validation compares against the correct previous reading
@@ -265,7 +278,24 @@ const InputForm = () => {
         return;
       }
 
-      // No duplicate, proceed with save
+      // No duplicate, check for backdate recalculation (Top-Up mode only)
+      if (activeTab === 'topup') {
+        const readingsAfter = await getReadingsAfterDate(currentUser.id, formData.date);
+
+        if (readingsAfter.length > 0) {
+          // Calculate offset = kWh purchased
+          const purchasedKwh = parseFloat(formData.token_amount) || calculatedTokenAmount || 0;
+
+          setAffectedReadings(readingsAfter);
+          setKwhOffset(purchasedKwh);
+          setPendingSubmission(readingData);
+          setShowRecalculationModal(true);
+          setLoading(false);
+          return; // Wait for modal confirmation
+        }
+      }
+
+      // No backdate recalculation needed, proceed with save
       await saveReading(readingData);
     } catch (err) {
       let errorMessage = t('input.validation.failedToSave');
@@ -381,6 +411,34 @@ const InputForm = () => {
     }, 50);
   };
 
+  // Handle backdate recalculation confirmation
+  const handleRecalculationConfirm = async () => {
+    try {
+      setLoading(true);
+      setShowRecalculationModal(false);
+
+      // 1. Save the new backdate top-up reading
+      await saveReading(pendingSubmission);
+
+      // 2. Update all affected readings (add offset to kwh_value)
+      const updates = affectedReadings.map(reading => ({
+        id: reading.id,
+        kwh_value: reading.kwh_value + kwhOffset
+      }));
+
+      await bulkUpdateReadingsKwh(updates);
+
+      // Success - clear backdate state
+      setAffectedReadings([]);
+      setKwhOffset(0);
+      setPendingSubmission(null);
+
+    } catch (err) {
+      setError(err.message || 'Failed to update readings');
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-xl mx-auto pb-10">
       <div className="mb-6 text-center">
@@ -446,6 +504,8 @@ const InputForm = () => {
               name="date"
               value={formData.date}
               onChange={handleChange}
+              min={minDateStr}
+              max={maxDateStr}
               required
               className="block w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-primary focus:ring-primary sm:text-sm px-4 py-3 border transition-colors"
             />
@@ -632,6 +692,22 @@ const InputForm = () => {
         onClose={() => setShowAnomalyModal(false)}
         details={anomalyDetails}
         onSwitchToTopUp={handleSwitchToTopUp}
+      />
+
+      {/* Backdate Recalculation Modal */}
+      <BackdateRecalculationModal
+        isOpen={showRecalculationModal}
+        onClose={() => {
+          setShowRecalculationModal(false);
+          setAffectedReadings([]);
+          setKwhOffset(0);
+          setPendingSubmission(null);
+        }}
+        onConfirm={handleRecalculationConfirm}
+        backdateDate={formData.date}
+        affectedReadings={affectedReadings}
+        kwhOffset={kwhOffset}
+        loading={loading}
       />
     </div>
   );

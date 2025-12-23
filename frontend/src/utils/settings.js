@@ -225,10 +225,14 @@ export const getBudgetForPeriod = (timeRange) => {
 
   switch (timeRange) {
     case 'day':
-      return monthlyBudget / 30;
-    case 'week':
+      // 'day' filter shows last 7 days, so use 7-day budget
       return (monthlyBudget / 30) * 7;
+    case 'week':
+      // 'week' filter shows 4 weeks, so use ~1 month budget
+      return monthlyBudget;
     case 'month':
+      // 'month' filter shows 6 months, so use 6x monthly budget
+      return monthlyBudget * 6;
     default:
       return monthlyBudget;
   }

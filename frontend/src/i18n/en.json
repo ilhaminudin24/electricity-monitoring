@@ -39,6 +39,7 @@
     "currentMonth": "Current month",
     "dailyAverage": "Daily Average",
     "last30Days": "Last 30 days",
+    "last7Days": "Last 7 Days",
     "tokenPrediction": "Token Prediction",
     "noTokenData": "No token data",
     "addTokenInfo": "Add token info",
@@ -53,7 +54,21 @@
     "dailyUsage": "Daily Usage",
     "weeklyUsage": "Weekly Usage",
     "monthlyUsageChart": "Monthly Usage",
-    "loadingDashboard": "Loading dashboard..."
+    "loadingDashboard": "Loading dashboard...",
+    "daily": "Daily",
+    "today": "Today",
+    "thisWeek": "Weekly",
+    "thisMonth": "Monthly",
+    "tokenBurnRate": "Token Burn Rate",
+    "basedOnAvg": "Based on {{days}}-day average usage",
+    "criticalWarning": "Critical! Less than 3 days",
+    "warningZone": "Warning! Less than 7 days",
+    "safeZone": "Safe Zone",
+    "remaining": "remaining",
+    "daysLeft": "days left",
+    "estimatedEmpty": "Est. Empty",
+    "avgUsage": "Avg Usage",
+    "dayIndex": "Day {{days}} projection"
   },
   "input": {
     "title": "Input Meter Reading",
@@ -243,8 +258,8 @@
   "time": {
     "today": "Today",
     "yesterday": "Yesterday",
-    "thisWeek": "This week",
-    "thisMonth": "This month",
+    "thisWeek": "Weekly",
+    "thisMonth": "Monthly",
     "lastMonth": "Last month",
     "daysAgo": "days ago",
     "hoursAgo": "hours ago",
@@ -420,5 +435,18 @@
       "netAmountAfterFees": "Net amount after admin & tax: Rp {{amount}}",
       "estimatedKwh": "Estimated kWh: {{kwh}} kWh"
     }
+  },
+  "backdateRecalculation": {
+    "title": "Data Adjustment Required",
+    "message": "You're adding a top-up for {{date}}",
+    "affectedReadings": "There are {{count}} readings after this date that need adjustment:",
+    "tableHeaders": {
+      "date": "Date",
+      "current": "Current",
+      "new": "New Value"
+    },
+    "consumptionNote": "Your daily consumption remains unchanged.",
+    "cancel": "Cancel",
+    "confirmUpdate": "Save & Update All"
   }
 }

@@ -18,9 +18,9 @@ const TotalUsageCard = ({
     // Helper to get title based on range
     const getRangeTitle = () => {
         switch (timeRange) {
-            case 'day': return t('dashboard.todayVsYesterday');
-            case 'week': return t('dashboard.last7Days');
-            case 'month': return t('dashboard.last30Days');
+            case 'day': return t('dashboard.last7Days');
+            case 'week': return t('dashboard.last4Weeks');
+            case 'month': return t('dashboard.last6Months');
             default: return t('dashboard.totalUsage');
         }
     };

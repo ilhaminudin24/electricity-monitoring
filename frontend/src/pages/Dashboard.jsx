@@ -7,7 +7,8 @@ import {
   calculateDailyUsage,
   calculateWeeklyUsage,
   calculateMonthlyUsage,
-  calculateTokenPrediction
+  calculateTokenPrediction,
+  calculateBurnRateProjection
 } from '../utils/analytics';
 import { getSettings } from '../utils/settings';
 
@@ -42,6 +43,9 @@ const Dashboard = () => {
     daysUntilDepletion: null,
     hasToken: false
   });
+
+  // Burn Rate Projection data
+  const [burnRateData, setBurnRateData] = useState(null);
 
   // Filter State
   const [usageFilter, setUsageFilter] = useState('week'); // 'day', 'week', 'month'
@@ -109,6 +113,10 @@ const Dashboard = () => {
       // 4. Token & Cost Predictions
       const tokenPred = calculateTokenPrediction(fetchedReadings);
 
+      // 5. Calculate Burn Rate Projection for new chart
+      const burnRate = calculateBurnRateProjection(fetchedReadings);
+      setBurnRateData(burnRate);
+
       // Estimate Cost
       const settings = getSettings();
       const tariff = settings.tariffPerKwh || 1444.70;
@@ -159,30 +167,13 @@ const Dashboard = () => {
     };
 
     if (usageFilter === 'day') {
-      // Today vs Yesterday
-      // Last element is today (if sorted ascending)
-      const today = sortedDaily[sortedDaily.length - 1] || { usage_kwh: 0, date: new Date().toISOString() };
-      const yesterday = sortedDaily[sortedDaily.length - 2] || { usage_kwh: 0, date: new Date(Date.now() - 86400000).toISOString() };
-
-      total = today.usage_kwh;
-
-      // Trend vs Yesterday
-      if (yesterday.usage_kwh > 0) {
-        trend = ((today.usage_kwh - yesterday.usage_kwh) / yesterday.usage_kwh) * 100;
-      }
-
-      chartData = [
-        { name: t('time.yesterday', 'Yesterday'), value: yesterday.usage_kwh, isTopUp: yesterday.isTopUp },
-        { name: t('dashboard.today'), value: today.usage_kwh, isTopUp: today.isTopUp }
-      ];
-
-    } else if (usageFilter === 'week') {
-      // Last 7 days
+      // Daily view: Show last 7 days for more meaningful data
       const last7 = sortedDaily.slice(-7);
       const prev7 = sortedDaily.slice(-14, -7);
 
       total = sumUsage(last7);
 
+      // Trend vs Previous 7 Days
       const sumPrev7 = sumUsage(prev7);
       if (sumPrev7 > 0) {
         trend = ((total - sumPrev7) / sumPrev7) * 100;
@@ -194,22 +185,54 @@ const Dashboard = () => {
         isTopUp: d.isTopUp
       }));
 
-    } else if (usageFilter === 'month') {
-      // Last 30 days
-      const last30 = sortedDaily.slice(-30);
-      const prev30 = sortedDaily.slice(-60, -30);
+    } else if (usageFilter === 'week') {
+      // Weekly view: Show last 4 weeks aggregated by week
+      // weeklyData is already sorted newest first from aggregateWeekly
+      const last4Weeks = weeklyData.slice(0, 4).reverse(); // Reverse for chart (oldest to newest)
 
-      total = sumUsage(last30);
+      total = last4Weeks.reduce((acc, w) => acc + w.usage_kwh, 0);
 
-      const sumPrev30 = sumUsage(prev30);
-      if (sumPrev30 > 0) {
-        trend = ((total - sumPrev30) / sumPrev30) * 100;
+      // Trend: This week vs last week
+      const thisWeek = weeklyData[0]?.usage_kwh || 0;
+      const lastWeek = weeklyData[1]?.usage_kwh || 0;
+      if (lastWeek > 0) {
+        trend = ((thisWeek - lastWeek) / lastWeek) * 100;
       }
 
-      chartData = last30.map(d => ({
-        name: formatDate(d.date),
-        value: d.usage_kwh,
-        isTopUp: d.isTopUp
+      // Format week label helper
+      const formatWeekLabel = (startDate, endDate) => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const startDay = start.getDate();
+        const endDay = end.getDate();
+        const month = start.toLocaleDateString('en-US', { month: 'short' });
+        return `${month} ${startDay}-${endDay}`;
+      };
+
+      chartData = last4Weeks.map(w => ({
+        name: formatWeekLabel(w.startDate, w.endDate),
+        value: w.usage_kwh,
+        isTopUp: false
+      }));
+
+    } else if (usageFilter === 'month') {
+      // Monthly view: Show last 6 months aggregated by month
+      // monthlyData is already sorted newest first from aggregateMonthly
+      const last6Months = monthlyData.slice(0, 6).reverse(); // Reverse for chart (oldest to newest)
+
+      total = last6Months.reduce((acc, m) => acc + m.usage_kwh, 0);
+
+      // Trend: This month vs last month
+      const thisMonth = monthlyData[0]?.usage_kwh || 0;
+      const lastMonth = monthlyData[1]?.usage_kwh || 0;
+      if (lastMonth > 0) {
+        trend = ((thisMonth - lastMonth) / lastMonth) * 100;
+      }
+
+      chartData = last6Months.map(m => ({
+        name: m.monthName || m.month,
+        value: m.usage_kwh,
+        isTopUp: false
       }));
     }
 
@@ -218,24 +241,24 @@ const Dashboard = () => {
     const tariff = settings.tariffPerKwh || 1444.70;
     const filteredCost = total * tariff;
 
-    // Calculate daily average for the period
-    let numDays = 1;
-    if (usageFilter === 'day') numDays = 1;
-    else if (usageFilter === 'week') numDays = 7;
-    else if (usageFilter === 'month') numDays = 30;
+    // Calculate average for the period
+    let numPeriods = 1;
+    if (usageFilter === 'day') numPeriods = 7;      // 7 days
+    else if (usageFilter === 'week') numPeriods = 4; // 4 weeks
+    else if (usageFilter === 'month') numPeriods = 6; // 6 months
 
-    const dailyAvgUsage = numDays > 0 ? total / numDays : 0;
-    const dailyAvgCost = dailyAvgUsage * tariff;
+    const avgUsage = numPeriods > 0 ? total / numPeriods : 0;
+    const avgCost = avgUsage * tariff;
 
     setFilteredUsage({
       total: parseFloat(total.toFixed(2)),
       trend: Math.round(trend),
       chartData,
       estimatedCost: parseFloat(filteredCost.toFixed(2)),
-      dailyAvgCost: parseFloat(dailyAvgCost.toFixed(2))
+      dailyAvgCost: parseFloat(avgCost.toFixed(2))
     });
 
-  }, [dailyData, usageFilter]);
+  }, [dailyData, weeklyData, monthlyData, usageFilter]);
 
   if (loading) {
     return (
@@ -302,6 +325,7 @@ const Dashboard = () => {
             weeklyData={weeklyData}
             monthlyData={monthlyData}
             timeRange={usageFilter}
+            burnRateData={burnRateData}
           />
         </div>
 

@@ -39,6 +39,7 @@
     "currentMonth": "Bulan ini",
     "dailyAverage": "Rata-rata Harian",
     "last30Days": "30 hari terakhir",
+    "last7Days": "7 Hari Terakhir",
     "tokenPrediction": "Prediksi Token",
     "noTokenData": "Tidak ada data token",
     "addTokenInfo": "Tambah info token",
@@ -53,7 +54,21 @@
     "dailyUsage": "Pemakaian Harian",
     "weeklyUsage": "Pemakaian Mingguan",
     "monthlyUsageChart": "Pemakaian Bulanan",
-    "loadingDashboard": "Memuat dashboard..."
+    "loadingDashboard": "Memuat dashboard...",
+    "daily": "Harian",
+    "today": "Hari Ini",
+    "thisWeek": "Mingguan",
+    "thisMonth": "Bulanan",
+    "tokenBurnRate": "Proyeksi Token",
+    "basedOnAvg": "Berdasarkan rata-rata {{days}} hari",
+    "criticalWarning": "Kritis! Kurang dari 3 hari",
+    "warningZone": "Peringatan! Kurang dari 7 hari",
+    "safeZone": "Zona Aman",
+    "remaining": "tersisa",
+    "daysLeft": "hari lagi",
+    "estimatedEmpty": "Perkiraan Habis",
+    "avgUsage": "Rata-rata",
+    "dayIndex": "Proyeksi hari ke-{{days}}"
   },
   "input": {
     "title": "Input Pembacaan Meter",
@@ -243,8 +258,8 @@
   "time": {
     "today": "Hari ini",
     "yesterday": "Kemarin",
-    "thisWeek": "Minggu ini",
-    "thisMonth": "Bulan ini",
+    "thisWeek": "Mingguan",
+    "thisMonth": "Bulanan",
     "lastMonth": "Bulan lalu",
     "daysAgo": "hari yang lalu",
     "hoursAgo": "jam yang lalu",
@@ -420,5 +435,18 @@
       "netAmountAfterFees": "Jumlah bersih setelah admin & pajak: Rp {{amount}}",
       "estimatedKwh": "Perkiraan kWh: {{kwh}} kWh"
     }
+  },
+  "backdateRecalculation": {
+    "title": "Penyesuaian Data Diperlukan",
+    "message": "Anda menambahkan isi ulang untuk tanggal {{date}}",
+    "affectedReadings": "Ada {{count}} pembacaan setelah tanggal ini yang perlu disesuaikan:",
+    "tableHeaders": {
+      "date": "Tanggal",
+      "current": "Sekarang",
+      "new": "Menjadi"
+    },
+    "consumptionNote": "Konsumsi harian Anda tetap sama.",
+    "cancel": "Batal",
+    "confirmUpdate": "Simpan & Update Semua"
   }
 }

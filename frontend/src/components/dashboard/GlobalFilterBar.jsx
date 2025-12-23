@@ -14,7 +14,7 @@ const GlobalFilterBar = ({ currentFilter, onFilterChange }) => {
 
     const getLabel = (range) => {
         switch (range) {
-            case 'day': return t('dashboard.today');
+            case 'day': return t('dashboard.daily');
             case 'week': return t('dashboard.thisWeek');
             case 'month': return t('dashboard.thisMonth');
             default: return range;

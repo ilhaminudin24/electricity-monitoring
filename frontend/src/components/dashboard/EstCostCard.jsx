@@ -16,11 +16,14 @@ const EstCostCard = ({ estimatedCost, dailyAverageCost, timeRange = 'month' }) =
     let avgLabel = t('dashboard.dailyAvg');
 
     if (timeRange === 'day') {
-        periodLabel = t('dashboard.today');
-        avgLabel = t('dashboard.todayCost');
-    } else if (timeRange === 'week') {
-        periodLabel = t('dashboard.thisWeek');
+        periodLabel = t('dashboard.last7Days');
         avgLabel = t('dashboard.dailyAvg');
+    } else if (timeRange === 'week') {
+        periodLabel = t('dashboard.last4Weeks');
+        avgLabel = t('dashboard.weeklyAvg');
+    } else if (timeRange === 'month') {
+        periodLabel = t('dashboard.last6Months');
+        avgLabel = t('dashboard.monthlyAvg');
     }
 
     // Calculate percentage of budget used (handle zero budget gracefully)

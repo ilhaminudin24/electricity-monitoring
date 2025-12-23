@@ -17,8 +17,9 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { getSettings } from '../../utils/settings';
+import TokenBurnRateChart from './TokenBurnRateChart';
 
-const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], timeRange = 'day' }) => {
+const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], timeRange = 'day', burnRateData = null }) => {
     const { t } = useTranslation();
     // timeRange received from parent via global filter
     const settings = getSettings();
@@ -85,27 +86,13 @@ const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], tim
     }, [monthlyData]);
 
     // Token Balance data (meterValue = remaining kWh)
+    // Fixed display: Always show last 30 days regardless of global filter
+    // This provides consistent view of token balance trend without filter confusion
     const balanceData = useMemo(() => {
-        // Use dailyData which has meterValue from computeDailyUsage
         const sorted = [...dailyData].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        // Filter based on timeRange - align with Consumption Trends chart
-        let filtered = sorted;
-        if (timeRange === 'day') {
-            // Match Consumption Trends: Today vs Yesterday
-            // Fallback: Show last 3 days (not 7) to keep it visually "daily" and distinct from Week view even with sparse data
-            filtered = hasTodayData ? sorted.slice(-2) : sorted.slice(-3);
-        } else if (timeRange === 'week') {
-            // Match Consumption Trends: Last 12 Weeks (~84 days)
-            // Shows full daily history for the period covered by weekly bars
-            filtered = sorted.slice(-84);
-        } else {
-            // Match Consumption Trends: Last 12 Months (~365 days)
-            filtered = sorted.slice(-365);
-        }
-
+        const filtered = sorted.slice(-30);
         return filtered.filter(d => d.meterValue !== null && d.meterValue !== undefined);
-    }, [dailyData, timeRange, hasTodayData]);
+    }, [dailyData]);
 
     // Custom Tick Formatter - handles different views
     const formatXAxis = (tickItem, payload) => {
@@ -225,132 +212,18 @@ const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], tim
             {/* TOP SECTION: Side-by-side layout for Consumption + Token Balance */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-                {/* LEFT: Consumption Trends (60% width = 3/5) */}
+                {/* LEFT: Token Burn Rate Projection (60% width = 3/5) */}
                 <div className="lg:col-span-3">
-                    <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                        <div>
-                            <h3 className="text-lg font-bold text-text-main dark:text-white">{t('dashboard.consumptionTrends')}</h3>
-                            <p className="text-sm text-text-sub">
-                                {timeRange === 'day'
-                                    ? (useDailyFallback ? t('dashboard.last7Days') : t('dashboard.todayVsYesterday'))
-                                    : timeRange === 'week'
-                                        ? t('dashboard.last7Days')
-                                        : t('dashboard.last30Days')}
-                            </p>
-                        </div>
-                        <span className="text-xs text-text-sub bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full font-medium capitalize">
-                            {timeRange === 'day' ? t('dashboard.today') : timeRange === 'week' ? t('dashboard.thisWeek') : t('dashboard.thisMonth')}
-                        </span>
-                    </div>
-
-                    <div className="w-full h-[260px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            {/* Weekly View: Use Bar Chart */}
-                            {timeRange === 'week' ? (
-                                <BarChart
-                                    data={chartData}
-                                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                                    <XAxis
-                                        dataKey="startDate"
-                                        tickFormatter={formatXAxis}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                        tickMargin={8}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                        width={40}
-                                    />
-                                    <Tooltip
-                                        content={({ active, payload, label }) => {
-                                            if (active && payload && payload.length) {
-                                                const data = payload[0].payload;
-                                                const startDate = data.startDate ? format(new Date(data.startDate), 'MMM d') : '';
-                                                const endDate = data.endDate ? format(new Date(data.endDate), 'd') : '';
-                                                return (
-                                                    <div className="bg-slate-800 text-white p-3 rounded-lg shadow-xl border border-slate-700">
-                                                        <p className="text-xs text-gray-400 mb-1">{startDate}-{endDate}</p>
-                                                        <p className="text-sm font-bold">
-                                                            {payload[0].value?.toFixed(2)} <span className="text-xs font-normal">kWh</span>
-                                                        </p>
-                                                        <p className="text-xs text-emerald-400 mt-1">
-                                                            Est. Rp {(payload[0].value * tariff).toLocaleString('id-ID')}
-                                                        </p>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        }}
-                                        cursor={{ fill: '#f1f5f9', opacity: 0.4 }}
-                                    />
-                                    <Bar
-                                        dataKey="usage_kwh"
-                                        fill="#10b981"
-                                        radius={[4, 4, 0, 0]}
-                                        activeBar={{ fill: '#059669' }}
-                                    />
-                                </BarChart>
-                            ) : (
-                                /* Daily/Monthly View: Use Area Chart */
-                                <AreaChart
-                                    data={chartData}
-                                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                                >
-                                    <defs>
-                                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#0066ff" stopOpacity={0.3} />
-                                            <stop offset="100%" stopColor="#0066ff" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#0066ff" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#0066ff" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                                    <XAxis
-                                        dataKey={timeRange === 'month' ? 'month' : 'date'}
-                                        tickFormatter={formatXAxis}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                        tickMargin={8}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                        width={40}
-                                    />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="usage_kwh"
-                                        stroke="#0066ff"
-                                        strokeWidth={2.5}
-                                        fill="url(#colorUv)"
-                                        activeDot={{ r: 5, strokeWidth: 0, fill: '#0066ff' }}
-                                        dot={(props) => {
-                                            const { cx, cy, payload } = props;
-                                            if (payload.isTopUp) {
-                                                return (
-                                                    <g key={`dot-${payload.date}`}>
-                                                        <circle cx={cx} cy={cy} r={5} fill="#ffffff" stroke="#3b82f6" strokeWidth={2} />
-                                                        <circle cx={cx} cy={cy} r={2.5} fill="#3b82f6" />
-                                                    </g>
-                                                );
-                                            }
-                                            return <circle cx={cx} cy={cy} r={0} />;
-                                        }}
-                                    />
-                                </AreaChart>
-                            )}
-                        </ResponsiveContainer>
-                    </div>
+                    <TokenBurnRateChart
+                        projectionData={burnRateData?.projectionData || []}
+                        remainingKwh={burnRateData?.remainingKwh || 0}
+                        daysRemaining={burnRateData?.daysUntilDepletion}
+                        depletionDate={burnRateData?.predictedDepletionDate}
+                        avgDailyUsage={burnRateData?.avgDailyUsage || 0}
+                        criticalKwh={burnRateData?.criticalKwh || 0}
+                        warningKwh={burnRateData?.warningKwh || 0}
+                        hasData={burnRateData?.hasData || false}
+                    />
                 </div>
 
                 {/* RIGHT: Token Balance History (40% width = 2/5) */}
