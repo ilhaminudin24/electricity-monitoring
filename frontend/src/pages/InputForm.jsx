@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { addReading, getLastReading, checkReadingExists, deleteReading, updateReading } from '../services/supabaseService';
+import { addReading, getLastReading, getLastReadingBeforeDate, checkReadingExists, deleteReading, updateReading } from '../services/supabaseService';
 import DuplicateDateModal from '../components/DuplicateDateModal';
 import EditReadingModal from '../components/EditReadingModal';
 import { formatRupiah, parseRupiah, formatRupiahInput } from '../utils/rupiah';
@@ -49,22 +49,38 @@ const InputForm = () => {
   const [showAnomalyModal, setShowAnomalyModal] = useState(false);
   const [anomalyDetails, setAnomalyDetails] = useState(null);
 
-  // Fetch last reading on mount
+  // Fetch last reading BEFORE the selected date (date-aware validation)
+  // This ensures validation compares against the correct previous reading
   useEffect(() => {
-    async function fetchLastReading() {
-      if (currentUser) {
+    async function fetchLastReadingBeforeDate() {
+      if (currentUser && formData.date) {
         try {
-          const last = await getLastReading(currentUser.id);
+          // Use the selected date for date-aware lookup
+          const selectedDate = formData.date;
+          const last = await getLastReadingBeforeDate(currentUser.id, selectedDate);
           if (last) {
-            setLastReadingVal(last.kwh_value || last.reading_kwh || 0);
+            const kwhVal = last.kwh_value || last.reading_kwh || 0;
+            setLastReadingVal(kwhVal);
+          } else {
+            // No previous reading found before this date
+            setLastReadingVal(0);
           }
         } catch (e) {
-          console.error("Failed to fetch last reading", e);
+          console.error("Failed to fetch last reading before date", e);
+          // Fallback: try to get absolute last reading
+          try {
+            const fallback = await getLastReading(currentUser.id);
+            if (fallback) {
+              setLastReadingVal(fallback.kwh_value || fallback.reading_kwh || 0);
+            }
+          } catch (fallbackErr) {
+            console.error("Fallback also failed", fallbackErr);
+          }
         }
       }
     }
-    fetchLastReading();
-  }, [currentUser]);
+    fetchLastReadingBeforeDate();
+  }, [currentUser, formData.date]);
 
   // Auto-calculate token amount and NEW METER READING when token cost changes
   useEffect(() => {
@@ -494,10 +510,10 @@ const InputForm = () => {
                 onChange={handleChange}
                 required
                 className={`block w-full rounded-xl sm:text-lg font-bold px-4 py-3 border transition-colors ${validationHint?.status === 'WARNING_READING_INCREASED'
-                    ? 'border-red-300 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-200'
-                    : activeTab === 'topup'
-                      ? 'border-blue-200 bg-blue-50/50 text-blue-900 focus:border-blue-400 focus:ring-blue-400'
-                      : 'border-gray-200 bg-gray-50 focus:bg-white focus:border-primary focus:ring-primary'
+                  ? 'border-red-300 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-200'
+                  : activeTab === 'topup'
+                    ? 'border-blue-200 bg-blue-50/50 text-blue-900 focus:border-blue-400 focus:ring-blue-400'
+                    : 'border-gray-200 bg-gray-50 focus:bg-white focus:border-primary focus:ring-primary'
                   }`}
                 placeholder="0000.00"
               />
@@ -507,8 +523,8 @@ const InputForm = () => {
             {/* Validation Hint Message */}
             {activeTab === 'record' && validationHint && (
               <div className={`mt-2 text-xs px-3 py-2 rounded-lg flex items-start gap-2 ${validationHint.isValid
-                  ? 'bg-green-50 text-green-700'
-                  : 'bg-red-50 text-red-700'
+                ? 'bg-green-50 text-green-700'
+                : 'bg-red-50 text-red-700'
                 }`}>
                 {validationHint.isValid ? (
                   <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />

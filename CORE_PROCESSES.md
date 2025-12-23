@@ -348,6 +348,28 @@ flowchart TD
     R2 --> R3[Success Notification]
 ```
 
+#### Date-Aware kWh Validation
+
+When inputting a new reading, the system validates that the new kWh value is **lower** than the previous reading (electricity consumption decreases the meter). The validation compares by **date only** (ignoring time).
+
+> [!IMPORTANT]
+> The `getLastReadingBeforeDate()` function fetches the last reading **before the selected date** (ignoring time), not the absolute latest reading. This allows correct validation when inputting readings on dates where other readings already exist.
+
+```mermaid
+flowchart TD
+    A[User selects date: Dec 29, 2PM] --> B[Extract date only: 2025-12-29]
+    B --> C[Query: readings WHERE date < 2025-12-29]
+    C --> D[Returns: Dec 28, 80 kWh]
+    D --> E{Input 70 kWh valid?}
+    E -->|70 < 80 ✓| F[Valid - Show consumption hint]
+    E -->|70 >= 80 ✗| G[Error - Must use Top Up mode]
+```
+
+| Scenario | Input Date | Input kWh | Compares Against | Result |
+|----------|-----------|-----------|------------------|--------|
+| Valid reading | Dec 29 (any time) | 70 | Dec 28: 80 kWh | ✅ Valid |
+| Invalid - increase | Dec 29 (any time) | 90 | Dec 28: 80 kWh | ❌ Error |
+
 #### Data Structure
 
 ```mermaid

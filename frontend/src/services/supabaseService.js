@@ -488,6 +488,36 @@ export const getLastReading = async (userId) => {
     }
 };
 
+// Get the last reading BEFORE a specific date (for date-aware validation)
+// This is critical for validating readings when user inputs a past/future date
+// NOTE: Compares only DATE (ignores time) - if user inputs on Dec 29,
+// this returns the last reading from Dec 28 or earlier
+export const getLastReadingBeforeDate = async (userId, beforeDate) => {
+    try {
+        // Extract only the DATE part (YYYY-MM-DD), ignoring time
+        const dateObj = new Date(beforeDate);
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const dateOnly = `${year}-${month}-${day}`; // Format: YYYY-MM-DD
+
+        const { data, error } = await supabase
+            .from('electricity_readings')
+            .select('*')
+            .eq('user_id', userId)
+            .lt('date', dateOnly) // Strictly BEFORE this DATE (ignores time)
+            .order('date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        return data || null;
+    } catch (error) {
+        console.error('Error fetching last reading before date:', error);
+        return null;
+    }
+};
+
 // Get dashboard stats (last reading, current month usage)
 export const getDashboardStats = async (userId) => {
     try {
