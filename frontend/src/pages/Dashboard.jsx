@@ -8,7 +8,8 @@ import {
   calculateWeeklyUsage,
   calculateMonthlyUsage,
   calculateTokenPrediction,
-  calculateBurnRateProjection
+  calculateBurnRateProjection,
+  calculateEfficiencyScore
 } from '../utils/analytics';
 import { getSettings } from '../utils/settings';
 
@@ -17,6 +18,9 @@ import TotalUsageCard from '../components/dashboard/TotalUsageCard';
 import EstCostCard from '../components/dashboard/EstCostCard';
 import TokenPredictionCard from '../components/dashboard/TokenPredictionCard';
 import MainUsageChart from '../components/dashboard/MainUsageChart';
+import TokenBurnRateChart from '../components/dashboard/TokenBurnRateChart';
+import TokenBalanceHistoryCard from '../components/dashboard/TokenBalanceHistoryCard';
+import EfficiencyScoreCard from '../components/dashboard/EfficiencyScoreCard';
 import AlertBox from '../components/dashboard/AlertBox';
 import RecentReadingsList from '../components/dashboard/RecentReadingsList';
 import GlobalFilterBar from '../components/dashboard/GlobalFilterBar';
@@ -46,6 +50,9 @@ const Dashboard = () => {
 
   // Burn Rate Projection data
   const [burnRateData, setBurnRateData] = useState(null);
+
+  // Efficiency Score data
+  const [efficiencyScore, setEfficiencyScore] = useState(null);
 
   // Filter State
   const [usageFilter, setUsageFilter] = useState('week'); // 'day', 'week', 'month'
@@ -117,9 +124,13 @@ const Dashboard = () => {
       const burnRate = calculateBurnRateProjection(fetchedReadings);
       setBurnRateData(burnRate);
 
-      // Estimate Cost
+      // Estimate Cost - get settings first
       const settings = getSettings();
       const tariff = settings.tariffPerKwh || 1444.70;
+
+      // 6. Calculate Efficiency Score (uses settings)
+      const effScore = calculateEfficiencyScore(fetchedReadings, settings);
+      setEfficiencyScore(effScore);
 
       // Daily Average Cost
       // Use daily average usage from token prediction or calculate manually
@@ -181,7 +192,7 @@ const Dashboard = () => {
 
       chartData = last7.map(d => ({
         name: formatDate(d.date),
-        value: d.usage_kwh,
+        value: parseFloat(d.usage_kwh.toFixed(2)),
         isTopUp: d.isTopUp
       }));
 
@@ -211,7 +222,7 @@ const Dashboard = () => {
 
       chartData = last4Weeks.map(w => ({
         name: formatWeekLabel(w.startDate, w.endDate),
-        value: w.usage_kwh,
+        value: parseFloat(w.usage_kwh.toFixed(2)),
         isTopUp: false
       }));
 
@@ -231,7 +242,7 @@ const Dashboard = () => {
 
       chartData = last6Months.map(m => ({
         name: m.monthName || m.month,
-        value: m.usage_kwh,
+        value: parseFloat(m.usage_kwh.toFixed(2)),
         isTopUp: false
       }));
     }
@@ -290,47 +301,65 @@ const Dashboard = () => {
       </div>
 
 
-      {/* Top Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="h-full">
-          <TotalUsageCard
-            totalKwh={filteredUsage.total}
-            trendPercentage={filteredUsage.trend}
-            chartData={filteredUsage.chartData}
-            timeRange={usageFilter}
-          />
+      {/* Row 1: Summary Cards (2/3) + Efficiency Score (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Summary Cards */}
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-full">
+            <TotalUsageCard
+              totalKwh={filteredUsage.total}
+              trendPercentage={filteredUsage.trend}
+              chartData={filteredUsage.chartData}
+              timeRange={usageFilter}
+            />
+          </div>
+          <div className="h-full">
+            <EstCostCard
+              estimatedCost={filteredUsage.estimatedCost}
+              dailyAverageCost={filteredUsage.dailyAvgCost}
+              timeRange={usageFilter}
+            />
+          </div>
         </div>
+        {/* Right: Efficiency Score - Now More Prominent */}
         <div className="h-full">
-          <EstCostCard
-            estimatedCost={filteredUsage.estimatedCost}
-            dailyAverageCost={filteredUsage.dailyAvgCost}
-            timeRange={usageFilter}
-          />
-        </div>
-        <div className="h-full">
-          <TokenPredictionCard
-            daysRemaining={prediction.daysUntilDepletion}
-            hasToken={prediction.hasToken}
-            remainingKwh={prediction.remainingKwh}
+          <EfficiencyScoreCard
+            score={efficiencyScore}
+            hasData={efficiencyScore?.hasData || false}
+            message={efficiencyScore?.message || ''}
           />
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
-        {/* Left Column: Main Chart (2/3 width) */}
-        <div className="lg:col-span-2">
-          <MainUsageChart
-            dailyData={dailyData}
-            weeklyData={weeklyData}
-            monthlyData={monthlyData}
-            timeRange={usageFilter}
-            burnRateData={burnRateData}
-          />
-        </div>
+      {/* Row 2: Token Prediction - Full Width */}
+      <TokenPredictionCard
+        daysRemaining={prediction.daysUntilDepletion}
+        hasToken={prediction.hasToken}
+        remainingKwh={prediction.remainingKwh}
+      />
 
-        {/* Right Column: Alerts & History (1/3 width) */}
-        <div className="flex flex-col gap-6 h-full">
+      {/* Row 3: Token Burn Rate Projection - Full Width (Core Value) */}
+      <div className="bg-white dark:bg-background-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 p-6">
+        <TokenBurnRateChart
+          projectionData={burnRateData?.projectionData || []}
+          remainingKwh={burnRateData?.remainingKwh || 0}
+          daysRemaining={burnRateData?.daysUntilDepletion}
+          depletionDate={burnRateData?.predictedDepletionDate}
+          avgDailyUsage={burnRateData?.avgDailyUsage || 0}
+          criticalKwh={burnRateData?.criticalKwh || 0}
+          warningKwh={burnRateData?.warningKwh || 0}
+          hasData={burnRateData?.hasData || false}
+        />
+      </div>
+
+      {/* Row 4: Token Balance History (60%) + Sidebar (40%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left: Token Balance History Chart */}
+        <div className="lg:col-span-3">
+          <TokenBalanceHistoryCard dailyData={dailyData} />
+        </div>
+        {/* Right: Alerts & Recent Activity */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
           <AlertBox dailyUsage={dailyData} />
           <RecentReadingsList readings={readings} />
         </div>

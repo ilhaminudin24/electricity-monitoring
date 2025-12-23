@@ -18,8 +18,9 @@ import {
 import { format } from 'date-fns';
 import { getSettings } from '../../utils/settings';
 import TokenBurnRateChart from './TokenBurnRateChart';
+import EfficiencyScoreCard from './EfficiencyScoreCard';
 
-const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], timeRange = 'day', burnRateData = null }) => {
+const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], timeRange = 'day', burnRateData = null, efficiencyScore = null }) => {
     const { t } = useTranslation();
     // timeRange received from parent via global filter
     const settings = getSettings();
@@ -293,42 +294,13 @@ const MainUsageChart = ({ dailyData = [], weeklyData = [], monthlyData = [], tim
                 )}
             </div>
 
-            {/* BOTTOM SECTION: Monthly History Bar Chart */}
+            {/* BOTTOM SECTION: Efficiency Score Card */}
             <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
-                <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                    <div>
-                        <h3 className="text-base font-bold text-text-main dark:text-white">{t('dashboard.monthlyHistory')}</h3>
-                        <p className="text-sm text-text-sub">{t('dashboard.last30Days')}</p>
-                    </div>
-                </div>
-
-                <div className="w-full h-[160px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={sortedMonthlyData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                            <XAxis
-                                dataKey="month"
-                                tickFormatter={formatMonthXAxis}
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                            />
-                            <YAxis
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                width={40}
-                            />
-                            <Tooltip content={<MonthlyTooltip />} cursor={{ fill: '#f1f5f9', opacity: 0.4 }} />
-                            <Bar
-                                dataKey="usage_kwh"
-                                fill="#07883b"
-                                radius={[4, 4, 0, 0]}
-                                activeBar={{ fill: '#05602a' }}
-                            />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+                <EfficiencyScoreCard
+                    score={efficiencyScore}
+                    hasData={efficiencyScore?.hasData || false}
+                    message={efficiencyScore?.message || ''}
+                />
             </div>
         </div>
     );

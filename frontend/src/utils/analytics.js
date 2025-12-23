@@ -257,3 +257,170 @@ export const calculateBurnRateProjection = (readings) => {
     isWarning: daysUntilDepletion <= warningDays && daysUntilDepletion > criticalDays,
   };
 };
+
+/**
+ * Calculate Efficiency Score (Gamification)
+ * Provides a 0-100 score based on 3 components:
+ * - Consistency (30 pts): How stable is daily usage?
+ * - Budget (40 pts): Is spending on track with budget?
+ * - Trend (30 pts): Is usage decreasing week-over-week?
+ * 
+ * @param {Array} readings - Array of reading objects
+ * @param {Object} settings - User settings (monthlyBudget, tariffPerKwh)
+ * @returns {Object} Efficiency score data
+ */
+export const calculateEfficiencyScore = (readings, settings = {}) => {
+  // Minimum data requirement
+  if (!readings || readings.length < 7) {
+    return {
+      hasData: false,
+      totalScore: null,
+      grade: null,
+      message: 'Insufficient data (need at least 7 days)',
+    };
+  }
+
+  // Get daily usage data
+  const dailyUsage = computeDailyUsage(readings);
+
+  if (dailyUsage.length < 7) {
+    return {
+      hasData: false,
+      totalScore: null,
+      grade: null,
+      message: 'Insufficient daily data',
+    };
+  }
+
+  const result = {
+    hasData: true,
+    consistencyScore: 0,
+    budgetScore: 0,
+    trendScore: 0,
+    totalScore: 0,
+    grade: '',
+    breakdown: {},
+    tips: [],
+  };
+
+  // ===== A. CONSISTENCY SCORE (30 pts) =====
+  // Based on Coefficient of Variation (CV) of daily usage
+  const last30Days = dailyUsage.slice(0, 30);
+  const usageValues = last30Days.filter(d => d.usage_kwh > 0).map(d => d.usage_kwh);
+
+  if (usageValues.length >= 7) {
+    const mean = usageValues.reduce((a, b) => a + b, 0) / usageValues.length;
+    const variance = usageValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / usageValues.length;
+    const stdDev = Math.sqrt(variance);
+    const cv = mean > 0 ? (stdDev / mean) * 100 : 0; // Coefficient of Variation
+
+    let consistencyPts = 6;
+    if (cv < 15) consistencyPts = 30;
+    else if (cv < 25) consistencyPts = 24;
+    else if (cv < 40) consistencyPts = 18;
+    else if (cv < 60) consistencyPts = 12;
+
+    result.consistencyScore = consistencyPts;
+    result.breakdown.consistency = {
+      mean: parseFloat(mean.toFixed(2)),
+      stdDev: parseFloat(stdDev.toFixed(2)),
+      cv: parseFloat(cv.toFixed(1)),
+      points: consistencyPts,
+      maxPoints: 30,
+    };
+
+    // Add tip if score is low
+    if (consistencyPts < 18) {
+      result.tips.push('consistency');
+    }
+  }
+
+  // ===== B. BUDGET COMPLIANCE SCORE (40 pts) =====
+  // Based on pacing ratio (actual spending pace vs expected pace)
+  const budget = settings.monthlyBudget || 500000;
+  const tariff = settings.tariffPerKwh || 1444.70;
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const daysElapsed = Math.max(1, Math.ceil((now - startOfMonth) / (1000 * 60 * 60 * 24)));
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthProgress = daysElapsed / daysInMonth;
+
+  // Get this month's usage
+  const currentMonthStr = now.toISOString().substring(0, 7); // YYYY-MM
+  const thisMonthUsage = last30Days
+    .filter(d => d.date && d.date.startsWith(currentMonthStr))
+    .reduce((sum, d) => sum + d.usage_kwh, 0);
+
+  const actualCost = thisMonthUsage * tariff;
+  const budgetUsedPct = budget > 0 ? (actualCost / budget) : 0;
+  const pacingRatio = monthProgress > 0 ? budgetUsedPct / monthProgress : 0;
+
+  let budgetPts = 8;
+  if (pacingRatio < 0.8) budgetPts = 40;
+  else if (pacingRatio < 1.0) budgetPts = 32;
+  else if (pacingRatio < 1.2) budgetPts = 24;
+  else if (pacingRatio < 1.5) budgetPts = 16;
+
+  result.budgetScore = budgetPts;
+  result.breakdown.budget = {
+    monthlyBudget: budget,
+    actualCost: parseFloat(actualCost.toFixed(0)),
+    budgetUsedPct: parseFloat((budgetUsedPct * 100).toFixed(1)),
+    monthProgress: parseFloat((monthProgress * 100).toFixed(1)),
+    pacingRatio: parseFloat(pacingRatio.toFixed(2)),
+    points: budgetPts,
+    maxPoints: 40,
+  };
+
+  // Add tip if score is low
+  if (budgetPts < 24) {
+    result.tips.push('budget');
+  }
+
+  // ===== C. TREND SCORE (30 pts) =====
+  // Based on week-over-week usage change
+  const sortedDaily = [...dailyUsage].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const thisWeek = sortedDaily.slice(0, 7).reduce((s, d) => s + d.usage_kwh, 0);
+  const lastWeek = sortedDaily.slice(7, 14).reduce((s, d) => s + d.usage_kwh, 0);
+
+  let trendPts = 20; // Default: stable
+  let changePct = 0;
+
+  if (lastWeek > 0) {
+    changePct = ((thisWeek - lastWeek) / lastWeek) * 100;
+
+    if (changePct < -10) trendPts = 30;      // Significant decrease
+    else if (changePct < -5) trendPts = 25;  // Moderate decrease
+    else if (changePct <= 5) trendPts = 20;  // Stable
+    else if (changePct < 10) trendPts = 12;  // Moderate increase
+    else trendPts = 6;                        // Significant increase
+  }
+
+  result.trendScore = trendPts;
+  result.breakdown.trend = {
+    thisWeek: parseFloat(thisWeek.toFixed(2)),
+    lastWeek: parseFloat(lastWeek.toFixed(2)),
+    changePct: parseFloat(changePct.toFixed(1)),
+    points: trendPts,
+    maxPoints: 30,
+  };
+
+  // Add tip if score is low
+  if (trendPts < 20) {
+    result.tips.push('trend');
+  }
+
+  // ===== TOTAL SCORE & GRADE =====
+  result.totalScore = result.consistencyScore + result.budgetScore + result.trendScore;
+
+  // Assign Grade
+  if (result.totalScore >= 90) result.grade = 'A+';
+  else if (result.totalScore >= 80) result.grade = 'A';
+  else if (result.totalScore >= 70) result.grade = 'B';
+  else if (result.totalScore >= 60) result.grade = 'C';
+  else if (result.totalScore >= 50) result.grade = 'D';
+  else result.grade = 'F';
+
+  return result;
+};

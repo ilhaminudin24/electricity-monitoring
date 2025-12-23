@@ -563,9 +563,82 @@ mindmap
 | [GlobalFilterBar.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/dashboard/GlobalFilterBar.jsx) | Day/Week/Month toggle |
 | [AlertBox.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/dashboard/AlertBox.jsx) | Usage warning alerts |
 | [RecentReadingsList.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/dashboard/RecentReadingsList.jsx) | Recent readings display |
+| [EfficiencyScoreCard.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/dashboard/EfficiencyScoreCard.jsx) | Gamified efficiency score display |
+| [TokenBurnRateChart.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/dashboard/TokenBurnRateChart.jsx) | Token burn rate projection chart |
 | [analytics.js](file:///d:/Project/electricity-monitoring/frontend/src/utils/analytics.js) | Analytics calculation functions |
 
+#### Efficiency Score Card
+
+The **EfficiencyScoreCard** provides a gamified scoring system (0-100) that analyzes user consumption patterns across three dimensions.
+
+```mermaid
+flowchart LR
+    subgraph EfficiencyScore["Efficiency Score (0-100)"]
+        subgraph Components["Score Components"]
+            Consistency["Consistency (40 pts)<br/>Stable daily usage"]
+            Budget["Budget (30 pts)<br/>Within monthly budget"]
+            Trend["Trend (30 pts)<br/>Usage improving vs last week"]
+        end
+        
+        subgraph Grades["Grade System"]
+            APlus["A+ (90-100) - Excellent"]
+            A["A (80-89) - Great"]
+            B["B (70-79) - Good"]
+            C["C (60-69) - Fair"]
+            D["D (50-59) - Poor"]
+            F["F (<50) - Needs Improvement"]
+        end
+        
+        Components --> Total["Total Score"]
+        Total --> Grades
+    end
+```
+
+**Features:**
+- **Consistency Score (40 pts)**: Measures how stable daily usage is (low variance = higher score)
+- **Budget Score (30 pts)**: Tracks adherence to monthly budget settings
+- **Trend Score (30 pts)**: Compares current week usage to previous week
+- **Dynamic Tips**: Contextual improvement suggestions based on weak areas
+- **Grade Display**: Letter grade (A+ to F) with colored visual indicator
+
+> [!NOTE]
+> Requires at least 7 days of data to calculate a meaningful score. Empty state shows "Need More Data" message.
+
+#### Token Burn Rate Projection
+
+The **TokenBurnRateChart** visualizes token depletion over time using an area chart with critical zones.
+
+```mermaid
+flowchart TD
+    subgraph TokenBurnRate["Token Burn Rate Projection"]
+        Current["Current Balance<br/>(from latest reading)"]
+        AvgUsage["30-Day Average Usage<br/>(kWh per day)"]
+        
+        Current --> Projection["Generate 60-day Projection"]
+        AvgUsage --> Projection
+        
+        Projection --> Chart["Area Chart Display"]
+        
+        subgraph Zones["Visual Zones"]
+            Safe["Safe Zone (Green)<br/>> 7 days remaining"]
+            Warning["Warning Zone (Yellow)<br/>3-7 days remaining"]
+            Critical["Critical Zone (Red)<br/>< 3 days remaining"]
+        end
+        
+        Chart --> Zones
+    end
+```
+
+**Features:**
+- **30-Day Rolling Average**: Uses historical data for accurate projection
+- **60-Day Forecast**: Projects token balance up to 60 days ahead
+- **Critical/Warning Reference Lines**: Visual thresholds at 3-day and 7-day marks
+- **Depletion Date**: Shows exact predicted date when token reaches zero
+- **Status Indicator**: Color-coded badge (Safe/Warning/Critical)
+- **Daily Usage Stats**: Displays average consumption per day
+
 ---
+
 
 ### 4. Reading History Management
 
@@ -1231,6 +1304,8 @@ All processes are integrated through:
 
 | Feature | Description |
 |---------|-------------|
+| **Efficiency Score** | Gamified scoring (0-100) analyzing consistency, budget adherence, and trends |
+| **Token Burn Rate** | Visual projection chart showing token depletion with critical/warning zones |
 | **Tabbed Input Form** | Separate modes for Recording and Top-Up with distinct themes |
 | **Smart Pre-fill** | Auto-calculate new meter position based on token purchase |
 | **Reading Validation** | Detect anomalies when reading increases without top-up |
@@ -1240,3 +1315,4 @@ All processes are integrated through:
 | **Chart Improvements** | Top-up markers, weekly date ranges, chronological sorting |
 | **Premium Redesign** | All pages upgraded to glassmorphism design |
 | **Full i18n Support** | Complete translations for EN and ID languages |
+

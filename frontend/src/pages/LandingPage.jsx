@@ -18,7 +18,8 @@ import {
   Cloud,
   Shield,
   CheckCircle,
-  ChevronRight
+  ChevronRight,
+  Target
 } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
@@ -369,7 +370,7 @@ const LandingPage = React.memo(() => {
                     descKey: "landingPage.features.feature4Desc"
                   },
                   {
-                    icon: <Zap className="w-8 h-8" />,
+                    icon: <Target className="w-8 h-8" />,
                     color: "text-rose-500",
                     bg: "bg-rose-100",
                     hoverBg: "group-hover:bg-rose-500",

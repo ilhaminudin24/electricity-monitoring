@@ -74,9 +74,14 @@ const TotalUsageCard = ({
                                                     <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{t('dashboard.tokenTopUp')}</p>
                                                 </div>
                                             ) : (
-                                                <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                                    {payload[0].value} <span className="text-xs font-normal text-gray-500">kWh</span>
-                                                </p>
+                                                <>
+                                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                        {payload[0].value.toFixed(2)} <span className="text-xs font-normal text-gray-500">kWh</span>
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-400 mt-1 italic">
+                                                        {t('dashboard.distributedUsage')}
+                                                    </p>
+                                                </>
                                             )}
                                         </div>
                                     );
