@@ -112,7 +112,7 @@ const Layout = ({ children }) => {
             <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 text-gray-600 dark:text-gray-300">
               <Menu className="w-6 h-6" />
             </button>
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-8 object-contain" />
+            <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-8 object-contain" />
           </div>
         </header>
 

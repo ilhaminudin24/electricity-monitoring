@@ -11,7 +11,8 @@ import { toDateTimeLocalInput, fromDateTimeLocalInput } from '../utils/date';
 import { calculateTokenAmount } from '../utils/settings';
 import { validateReading, VALIDATION_RESULT, getValidationMessage } from '../utils/validationService';
 import ReadingAnomalyModal from '../components/ReadingAnomalyModal';
-import { Camera, Zap, ClipboardList, ArrowRight, RotateCcw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import FeatureTeaserModal from '../components/FeatureTeaserModal';
+import { Camera, Zap, ClipboardList, ArrowRight, RotateCcw, AlertTriangle, CheckCircle2, ScanLine } from 'lucide-react';
 
 const InputForm = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const InputForm = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('record'); // 'record' | 'topup'
   const [lastReadingVal, setLastReadingVal] = useState(0);
+  const [teaserFeature, setTeaserFeature] = useState(null);
 
   const [formData, setFormData] = useState({
     reading_kwh: '',
@@ -441,6 +443,11 @@ const InputForm = () => {
 
   return (
     <div className="max-w-xl mx-auto pb-10">
+      <FeatureTeaserModal
+        isOpen={!!teaserFeature}
+        onClose={() => setTeaserFeature(null)}
+        featureId={teaserFeature}
+      />
       <div className="mb-6 text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('input.title')}</h2>
         <p className="text-gray-500 text-sm mt-1">{t('input.subtitle')}</p>
@@ -525,10 +532,20 @@ const InputForm = () => {
                     name="token_cost"
                     value={formData.token_cost}
                     onChange={handleChange}
-                    className="block w-full pl-12 rounded-xl border-yellow-200 focus:border-yellow-400 focus:ring-yellow-400 sm:text-lg font-bold px-4 py-3 border transition-colors"
+                    className="block w-full pl-12 pr-12 rounded-xl border-yellow-200 focus:border-yellow-400 focus:ring-yellow-400 sm:text-lg font-bold px-4 py-3 border transition-colors"
                     placeholder="100.000"
                     autoFocus
                   />
+
+                  {/* OCR Upsell Button */}
+                  <button
+                    type="button"
+                    onClick={() => setTeaserFeature('OCR_SCAN')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 rounded-lg transition-colors"
+                    title={t('featureTeaser.ocrScan.title', 'Scan Token')}
+                  >
+                    <ScanLine className="w-5 h-5" />
+                  </button>
                 </div>
                 {calculatedTokenAmount && (
                   <div className="mt-3 flex items-center justify-between text-sm text-yellow-800 px-1">
@@ -569,7 +586,7 @@ const InputForm = () => {
                 value={formData.reading_kwh}
                 onChange={handleChange}
                 required
-                className={`block w-full rounded-xl sm:text-lg font-bold px-4 py-3 border transition-colors ${validationHint?.status === 'WARNING_READING_INCREASED'
+                className={`block w-full rounded-xl sm:text-lg font-bold pl-4 pr-24 py-3 border transition-colors ${validationHint?.status === 'WARNING_READING_INCREASED'
                   ? 'border-red-300 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-200'
                   : activeTab === 'topup'
                     ? 'border-blue-200 bg-blue-50/50 text-blue-900 focus:border-blue-400 focus:ring-blue-400'
@@ -577,6 +594,14 @@ const InputForm = () => {
                   }`}
                 placeholder="0000.00"
               />
+              <button
+                type="button"
+                onClick={() => setTeaserFeature('OCR_METER')}
+                className="absolute right-14 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                title={t('featureTeaser.ocrMeter.title', 'Scan Meter')}
+              >
+                <Camera className="w-5 h-5" />
+              </button>
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">kWh</span>
             </div>
 

@@ -75,6 +75,18 @@
     },
     "dashboard": {
         "title": "Dashboard",
+        "proUpgrade": {
+            "title": "Pro Early Access",
+            "desc": "Be the first to try Multi-Meter & OCR features.",
+            "cta": "Join Waitlist"
+        },
+        "featureTeaser": {
+            "proUpgrade": {
+                "title": "Pro Features Coming Soon!",
+                "desc": "We are building Multi-Meter and OCR Scanner features. Your support means a lot.",
+                "cta": "I'm Interested (Vote)"
+            }
+        },
         "welcomeBack": "Welcome back",
         "totalUsage": "Total Usage",
         "todayVsYesterday": "Today vs Yesterday",
@@ -311,13 +323,49 @@
         },
         "howItWorks": {
             "title": "How It Works",
-            "subtitle": "Three Simple Steps to Start Monitoring",
-            "step1Title": "Input Reading or Top Up",
-            "step1Desc": "Record your meter reading or log a token purchase with automatic kWh calculation.",
-            "step2Title": "Automatic Calculation",
-            "step2Desc": "System automatically calculates daily usage, costs, and predicts when your token will deplete.",
-            "step3Title": "View Dashboard",
-            "step3Desc": "Monitor your consumption through interactive charts, history, and detailed analytics."
+            "subtitle": "Total Control in 3 Steps",
+            "step1Title": "Smart Input",
+            "step1Desc": "Record manually or simply snap a photo & let AI read the meter for you.",
+            "step2Title": "Real-time Insight",
+            "step2Desc": "Track daily balance and get accurate predictions on when power will run out.",
+            "step3Title": "Full Control",
+            "step3Desc": "Manage multiple properties, set budgets, and receive critical alerts."
+        },
+        "pricing": {
+            "title": "Choose Plan",
+            "subtitle": "Free for individuals, powerful for boarding houses & property managers.",
+            "personal": {
+                "title": "Free",
+                "price": "Rp 0",
+                "badge": "Forever",
+                "desc": "Basic features for 1 electricity meter.",
+                "feature1": "1 Electricity Meter",
+                "feature2": "Manual Input",
+                "feature3": "Basic 7-Day Analytics",
+                "cta": "Start Free"
+            },
+            "pro": {
+                "title": "Smart Family",
+                "price": "Rp 15.000",
+                "period": "/month",
+                "badge": "BEST SELLER",
+                "desc": "Extra convenience for modern families.",
+                "feature1": "Up to 3 Meters (Home, Apt)",
+                "feature2": "Multi-User Access (Spouse)",
+                "feature3": "OCR Scan (Meter & Token)",
+                "cta": "Upgrade to Pro"
+            },
+            "business": {
+                "title": "Landlord",
+                "price": "Rp 49.000",
+                "period": "/month",
+                "badge": "BUSINESS",
+                "desc": "Automation for boarding house owners.",
+                "feature1": "10+ Electricity Meters",
+                "feature2": "Print PDF Bills / Invoices",
+                "feature3": "Staff / Keeper Access",
+                "cta": "Join Waitlist"
+            }
         },
         "bottomCta": {
             "title": "Manage your electricity smarter. Start for free today.",
@@ -336,6 +384,29 @@
             "terms": "Terms & Conditions",
             "copyright": "© 2025 CatatToken.ID. All rights reserved.",
             "madeWith": "Made with ❤️ in Indonesia"
+        }
+    },
+    "featureTeaser": {
+        "notifyMe": "Notify Me Upon Release",
+        "multiMeter": {
+            "title": "Manage Multiple Properties",
+            "desc": "Manage 10+ electricity meters in one account. Quick input, automated billing, and full control for landlords."
+        },
+        "buyToken": {
+            "title": "Buy Token Instantly",
+            "desc": "Running low at midnight? Buy tokens directly in the app via QRIS & E-Wallet with no extra fees."
+        },
+        "reports": {
+            "title": "Reports & Billing",
+            "desc": "Generate professional electricity invoices for your tenants. Send PDF via WhatsApp with one click."
+        },
+        "ocrScan": {
+            "title": "Scan Token Receipt",
+            "desc": "Tired of typing 20 digits? Just snap a photo of your PLN receipt, our AI will auto-fill the numbers."
+        },
+        "ocrMeter": {
+            "title": "Scan Electric Meter",
+            "desc": "Lazy to type? Snap a photo of your meter and our AI will read the kWh digits automatically."
         }
     }
 }

@@ -13,8 +13,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
-  Activity
+  Activity,
+  Download
 } from 'lucide-react';
+import { downloadCSV } from '../utils/exportUtils';
 import EditReadingModal from '../components/EditReadingModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import { useNavigate } from 'react-router-dom';
@@ -193,6 +195,34 @@ const History = () => {
     if (url) window.open(url, '_blank');
   };
 
+  const handleExport = () => {
+    if (!filteredReadings.length) return;
+
+    // Prepare data for export
+    const exportData = filteredReadings.map(r => ({
+      date: formatDateTimeLocal(r.date),
+      type: r.isTopUp ? 'Top Up' : 'Reading',
+      meter_reading_kwh: r.kwh_value,
+      consumption_kwh: r.consumptionDisplay === '—' ? 0 : r.consumption,
+      token_cost_idr: r.token_cost || 0,
+      calculated_cost_idr: r.calculatedCost || 0,
+      notes: r.notes || ''
+    }));
+
+    const headers = [
+      { key: 'date', label: 'Date/Time' },
+      { key: 'type', label: 'Type' },
+      { key: 'meter_reading_kwh', label: 'Meter Reading (kWh)' },
+      { key: 'consumption_kwh', label: 'Consumption/Token (kWh)' },
+      { key: 'token_cost_idr', label: 'Token Cost (IDR)' },
+      { key: 'calculated_cost_idr', label: 'Est. Cost (IDR)' },
+      { key: 'notes', label: 'Notes' }
+    ];
+
+    const filename = `electricity_readings_${new Date().toISOString().split('T')[0]}`;
+    downloadCSV(exportData, filename, headers);
+  };
+
   return (
     <div className="flex flex-col gap-8 animate-fadeIn">
       {/* Breadcrumbs */}
@@ -237,6 +267,17 @@ const History = () => {
 
         {/* Filters Group */}
         <div className="flex flex-wrap gap-2 lg:gap-3">
+          {/* Export Button */}
+          <button
+            onClick={handleExport}
+            disabled={filteredReadings.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Export filtered data to CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+
           {/* Date Range */}
           <div className="relative">
             <select

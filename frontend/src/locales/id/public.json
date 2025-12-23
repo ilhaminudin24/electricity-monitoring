@@ -75,6 +75,18 @@
     },
     "dashboard": {
         "title": "Dasbor",
+        "proUpgrade": {
+            "title": "Akses Awal Pro",
+            "desc": "Jadilah yang pertama mencoba fitur Multi-Meter & OCR.",
+            "cta": "Gabung Waitlist"
+        },
+        "featureTeaser": {
+            "proUpgrade": {
+                "title": "Fitur Pro Segera Hadir!",
+                "desc": "Kami sedang membangun fitur Multi-Meter dan Scanner OCR. Dukungan Anda sangat berarti.",
+                "cta": "Saya Tertarik (Vote)"
+            }
+        },
         "welcomeBack": "Selamat datang kembali",
         "totalUsage": "Total Pemakaian",
         "todayVsYesterday": "Hari Ini vs Kemarin",
@@ -311,13 +323,49 @@
         },
         "howItWorks": {
             "title": "Cara Kerja",
-            "subtitle": "Tiga Langkah Mudah untuk Mulai Memantau",
-            "step1Title": "Input Pembacaan atau Top Up",
-            "step1Desc": "Catat pembacaan meter Anda atau log pembelian token dengan kalkulasi kWh otomatis.",
-            "step2Title": "Perhitungan Otomatis",
-            "step2Desc": "Sistem otomatis menghitung pemakaian harian, biaya, dan memprediksi kapan token Anda habis.",
-            "step3Title": "Lihat Dashboard",
-            "step3Desc": "Pantau konsumsi Anda melalui chart interaktif, riwayat, dan analitik terperinci."
+            "subtitle": "Kontrol Penuh dalam 3 Langkah",
+            "step1Title": "Smart Input",
+            "step1Desc": "Catat manual atau cukup foto meteran Anda & biarkan AI kami membaca angkanya.",
+            "step2Title": "Real-time Insight",
+            "step2Desc": "Pantau sisa token hari ini dan dapatkan prediksi akurat kapan listrik akan habis.",
+            "step3Title": "Full Control",
+            "step3Desc": "Kelola banyak properti, atur budget bulanan, dan dapatkan notifikasi kritis."
+        },
+        "pricing": {
+            "title": "Pilihan Paket",
+            "subtitle": "Gratis untuk pribadi, powerful untuk bisnis kost & kontrakan.",
+            "personal": {
+                "title": "Gratis",
+                "price": "Rp 0",
+                "badge": "Selamanya",
+                "desc": "Fitur dasar untuk 1 meteran listrik.",
+                "feature1": "1 Meteran Listrik",
+                "feature2": "Input Manual",
+                "feature3": "Analisa Dasar 7 Hari",
+                "cta": "Mulai Gratis"
+            },
+            "pro": {
+                "title": "Keluarga Cerdas",
+                "price": "Rp 15.000",
+                "period": "/bulan",
+                "badge": "PALING LARIS",
+                "desc": "Kenyamanan ekstra untuk keluarga modern.",
+                "feature1": "Hingga 3 Meteran (Rumah, Apt)",
+                "feature2": "Akses Multi-User (Suami/Istri)",
+                "feature3": "Scan OCR (Meter & Token)",
+                "cta": "Upgrade ke Pro"
+            },
+            "business": {
+                "title": "Juragan Kost",
+                "price": "Rp 49.000",
+                "period": "/bulan",
+                "badge": "BISNIS",
+                "desc": "Otomatisasi untuk pemilik kost & properti.",
+                "feature1": "10+ Meteran Listrik",
+                "feature2": "Cetak Tagihan / Invoice PDF",
+                "feature3": "Akses Staff / Penjaga",
+                "cta": "Gabung Waitlist"
+            }
         },
         "bottomCta": {
             "title": "Kelola listrik Anda dengan lebih cerdas. Mulai gratis hari ini.",
@@ -336,6 +384,29 @@
             "terms": "Syarat & Ketentuan",
             "copyright": "© 2025 CatatToken.ID. Semua hak dilindungi.",
             "madeWith": "Dibuat dengan ❤️ di Indonesia"
+        }
+    },
+    "featureTeaser": {
+        "notifyMe": "Kabari Saya Saat Rilis",
+        "multiMeter": {
+            "title": "Kelola Kost & Kontrakan",
+            "desc": "Kelola 10+ meteran listrik dalam satu akun. Input cepat, tagihan otomatis, dan kontrol penuh untuk pemilik properti."
+        },
+        "buyToken": {
+            "title": "Beli Token Instan",
+            "desc": "Token habis di tengah malam? Beli langsung di aplikasi via QRIS & E-Wallet tanpa biaya admin tambahan."
+        },
+        "reports": {
+            "title": "Laporan & Tagihan",
+            "desc": "Cetak invoice tagihan listrik profesional untuk penyewa Anda. Kirim PDF via WhatsApp dengan satu klik."
+        },
+        "ocrScan": {
+            "title": "Scan Struk Token",
+            "desc": "Capek ketik 20 digit angka? Cukup foto struk PLN Anda, AI kami akan otomatis memasukkan nomornya."
+        },
+        "ocrMeter": {
+            "title": "Scan Meteran Listrik",
+            "desc": "Malas catat manual? Foto meteran listrik Anda dan AI kami akan membaca angka kwh secara otomatis."
         }
     }
 }

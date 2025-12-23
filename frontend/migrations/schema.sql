@@ -32,15 +32,7 @@ create table public.electricity_readings (
 -- Enable RLS
 alter table public.electricity_readings enable row level security;
 
--- 4. Create CMS Content Table
-create table public.cms_content (
-  section_id text primary key, -- e.g., 'hero', 'features', 'footer'
-  content jsonb not null default '{}'::jsonb,
-  updated_by uuid references auth.users(id),
-  updated_at timestamptz default now(),
-  is_published boolean default false,
-  version integer default 1
-);
+
 
 -- Enable RLS
 alter table public.cms_content enable row level security;
@@ -86,28 +78,7 @@ create policy "Users can delete their own readings"
   on public.electricity_readings for delete
   using ( auth.uid() = user_id );
 
--- CMS Content Policies
-create policy "Anyone can view published content"
-  on public.cms_content for select
-  using ( is_published = true );
 
-create policy "Admins can view all content including drafts"
-  on public.cms_content for select
-  using (
-    exists (
-      select 1 from public.user_profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
-
-create policy "Admins can insert/update content"
-  on public.cms_content for all
-  using (
-    exists (
-      select 1 from public.user_profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
 
 -- 6. Storage Policies (For reference - apply in Storage UI)
 -- Bucket: 'meter-photos'
@@ -166,7 +137,4 @@ create trigger update_user_profiles_updated_at
     for each row
     execute function update_updated_at_column();
 
-create trigger update_cms_content_updated_at
-    before update on public.cms_content
-    for each row
-    execute function update_updated_at_column();
+

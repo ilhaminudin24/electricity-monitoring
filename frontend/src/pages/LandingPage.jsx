@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { fetchPublishedCMSContent, subscribeToCMSUpdates } from '../services/cmsService';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import {
   Zap,
@@ -19,7 +18,9 @@ import {
   Shield,
   CheckCircle,
   ChevronRight,
-  Target
+  Target,
+  Activity,
+  ScanLine
 } from 'lucide-react';
 
 import { useNavigate } from 'react-router-dom';
@@ -38,63 +39,6 @@ const LandingPage = React.memo(() => {
     }
   }, [currentUser, loading, navigate]);
 
-  // CMS Data State
-  const [cmsData, setCmsData] = useState({
-    hero: null,
-    bottomCTA: null,
-    testimonial: null,
-    features: null,
-    howItWorks: null,
-    screenshots: null,
-    footer: null,
-    loading: true
-  });
-
-  // Load CMS data
-  useEffect(() => {
-    let isMounted = true;
-    let unsubscribe = null;
-
-    const fetchInitialData = async () => {
-      try {
-        const mappedData = await fetchPublishedCMSContent({ bypassCache: false });
-        if (isMounted) {
-          setCmsData(prev => ({ ...prev, ...mappedData, loading: false }));
-        }
-      } catch (error) {
-        if (isMounted) setCmsData(prev => ({ ...prev, loading: false }));
-      }
-    };
-
-    const setupRealtime = () => {
-      unsubscribe = subscribeToCMSUpdates((sectionId, content) => {
-        if (isMounted) {
-          setCmsData(prev => ({ ...prev, [sectionId]: content }));
-        }
-      });
-    };
-
-    fetchInitialData();
-    setupRealtime();
-
-    return () => {
-      isMounted = false;
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
-
-  const currentLang = i18n.language === 'id' ? 'id' : 'en';
-
-  // CMS Helpers
-  const getHeroData = useCallback(() => {
-    if (cmsData.hero && typeof cmsData.hero === 'object') {
-      const langData = cmsData.hero[currentLang] || cmsData.hero.en;
-      if (langData?.title) return langData;
-    }
-    return null;
-  }, [cmsData.hero, currentLang]);
-
-  const heroData = getHeroData();
 
   // Animation Variants
   const fadeInUp = {
@@ -119,7 +63,7 @@ const LandingPage = React.memo(() => {
           <div className="flex items-center justify-between h-[72px]">
             {/* Logo */}
             <div className="flex items-center cursor-pointer">
-              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-8 object-contain" />
+              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-8 object-contain" />
             </div>
 
             {/* Desktop Menu */}
@@ -203,11 +147,11 @@ const LandingPage = React.memo(() => {
                   </motion.div>
 
                   <motion.h1 variants={fadeInUp} className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.1] tracking-tight text-text-main">
-                    {heroData?.title || t('landingPage.hero.title')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">{t('landingPage.hero.highlight', 'Cerdas & Akurat')}</span>
+                    {t('landingPage.hero.title')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">{t('landingPage.hero.highlight', 'Cerdas & Akurat')}</span>
                   </motion.h1>
 
                   <motion.p variants={fadeInUp} className="text-text-sub text-lg sm:text-xl font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                    {heroData?.subtitle || t('landingPage.hero.subtitle')}
+                    {t('landingPage.hero.subtitle')}
                   </motion.p>
                 </div>
 
@@ -247,12 +191,10 @@ const LandingPage = React.memo(() => {
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-primary/20 to-secondary/20 rounded-full blur-3xl -z-10" />
 
                   {/* Main Image */}
-                  <div
-                    className="w-full h-full bg-contain bg-center bg-no-repeat drop-shadow-2xl animate-float"
-                    style={{
-                      backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuD95I77DitiZzYGbF5EUwfKqAPvr8BjxvdxX1s6VDuMIjONW8T5MTFlCeuX3Vb-zbbiWFx-pxw0KSNACR7QBg4cCoFZpk9owWIOxiTbYimV1Egj84-MKP_881lWUcac2slD7tgeoq-EleasSba-vfD-zsth3ZQlSfS1VvXQsGCMTKfImgoOE9i6APDFUQMDc9DHNI_dK_qJgrTP6YgQM74tgJDOpiUQBEzIBVlRdUVMEiO7KlIPUwPYuo0Rx6fs2F9g0nl7zS59dr4")',
-                      borderRadius: '24px'
-                    }}
+                  <img
+                    src={`${import.meta.env.BASE_URL}hero-illustration.jpg`}
+                    alt="App Illustration"
+                    className="w-full h-full object-contain drop-shadow-2xl animate-float rounded-[24px]"
                   />
 
                   {/* Floating Cards (Decorations) */}
@@ -407,8 +349,147 @@ const LandingPage = React.memo(() => {
           </div>
         </section>
 
+        {/* Pricing Section */}
+        <section id="pricing" className="py-20 bg-background-light relative overflow-hidden">
+          {/* Background Decor */}
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl -z-10" />
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-3xl -z-10" />
+
+          <div className="max-w-7xl mx-auto px-4 md:px-10">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+              className="text-center max-w-3xl mx-auto flex flex-col gap-4 mb-16"
+            >
+              <h2 className="text-primary font-bold tracking-wider uppercase text-sm">{t('landingPage.pricing.title', 'Pilihan Paket')}</h2>
+              <h3 className="text-text-main text-3xl md:text-4xl font-black leading-tight tracking-tight">
+                {t('landingPage.pricing.subtitle', 'Gratis untuk pribadi, powerful untuk bisnis')}
+              </h3>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto items-stretch">
+              {/* Free Plan */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="bg-white rounded-3xl p-6 border border-gray-100 shadow-soft hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col gap-6"
+              >
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-text-main text-lg font-bold">{t('landingPage.pricing.personal.title')}</h4>
+                  <div className="flex items-end gap-1">
+                    <span className="text-3xl font-black text-text-main">{t('landingPage.pricing.personal.price')}</span>
+                  </div>
+                  <p className="text-text-sub text-sm min-h-[40px]">{t('landingPage.pricing.personal.desc')}</p>
+                </div>
+
+                <div className="h-px w-full bg-gray-100" />
+
+                <ul className="flex flex-col gap-3 flex-1">
+                  {[1, 2, 3].map((i) => (
+                    <li key={i} className="flex items-center gap-2 text-text-main text-xs sm:text-sm">
+                      <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-3 h-3" />
+                      </div>
+                      {t(`landingPage.pricing.personal.feature${i}`)}
+                    </li>
+                  ))}
+                </ul>
+
+                <Link to="/register" className="mt-auto">
+                  <button className="w-full h-10 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 transition-all font-bold text-sm tracking-wide">
+                    {t('landingPage.pricing.personal.cta')}
+                  </button>
+                </Link>
+              </motion.div>
+
+              {/* Pro Plan - Highlighted */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="relative bg-white rounded-3xl p-6 border-2 border-primary shadow-glow flex flex-col gap-6 transform md:-translate-y-4 z-10"
+              >
+                <div className="absolute top-0 right-0 bg-primary text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-[20px] uppercase tracking-wider">
+                  {t('landingPage.pricing.pro.badge')}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-primary text-lg font-bold flex items-center gap-2">
+                    <Zap className="w-4 h-4 fill-primary" />
+                    {t('landingPage.pricing.pro.title')}
+                  </h4>
+                  <div className="flex items-end gap-1">
+                    <span className="text-4xl font-black text-text-main">{t('landingPage.pricing.pro.price')}</span>
+                    <span className="text-text-sub text-sm mb-1">{t('landingPage.pricing.pro.period')}</span>
+                  </div>
+                  <p className="text-text-sub text-sm min-h-[40px]">{t('landingPage.pricing.pro.desc')}</p>
+                </div>
+
+                <div className="h-px w-full bg-gray-100" />
+
+                <ul className="flex flex-col gap-3 flex-1">
+                  {[1, 2, 3].map((i) => (
+                    <li key={i} className="flex items-center gap-2 text-text-main text-sm font-medium">
+                      <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-3 h-3" />
+                      </div>
+                      {t(`landingPage.pricing.pro.feature${i}`)}
+                    </li>
+                  ))}
+                </ul>
+
+                <Link to="/register" className="mt-auto">
+                  <button className="w-full h-12 rounded-xl bg-primary text-white hover:bg-blue-600 shadow-lg hover:shadow-xl transition-all font-bold tracking-wide">
+                    {t('landingPage.pricing.pro.cta')}
+                  </button>
+                </Link>
+              </motion.div>
+
+              {/* Business Plan */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-white rounded-3xl p-6 border border-gray-100 shadow-soft hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col gap-6"
+              >
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-text-main text-lg font-bold">{t('landingPage.pricing.business.title')}</h4>
+                  <div className="flex items-end gap-1">
+                    <span className="text-3xl font-black text-text-main">{t('landingPage.pricing.business.price')}</span>
+                    <span className="text-text-sub text-sm mb-1">{t('landingPage.pricing.business.period')}</span>
+                  </div>
+                  <p className="text-text-sub text-sm min-h-[40px]">{t('landingPage.pricing.business.desc')}</p>
+                </div>
+
+                <div className="h-px w-full bg-gray-100" />
+
+                <ul className="flex flex-col gap-3 flex-1">
+                  {[1, 2, 3].map((i) => (
+                    <li key={i} className="flex items-center gap-2 text-text-main text-xs sm:text-sm">
+                      <div className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-3 h-3" />
+                      </div>
+                      {t(`landingPage.pricing.business.feature${i}`)}
+                    </li>
+                  ))}
+                </ul>
+
+                <button disabled className="mt-auto w-full h-10 rounded-xl bg-gray-50 text-gray-400 font-bold text-sm tracking-wide cursor-not-allowed border border-gray-200">
+                  {t('landingPage.pricing.business.cta')}
+                </button>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
         {/* How It Works Section */}
-        <section className="py-20 bg-background-alt px-4 md:px-10">
+        <section id="how-it-works" className="py-20 bg-background-alt px-4 md:px-10">
           <div className="max-w-7xl mx-auto">
             <motion.div
               initial="hidden"
@@ -432,22 +513,25 @@ const LandingPage = React.memo(() => {
             >
               {[
                 {
-                  step: "1",
+                  icon: <ScanLine className="w-6 h-6" />,
                   titleKey: "landingPage.howItWorks.step1Title",
                   descKey: "landingPage.howItWorks.step1Desc",
-                  color: "bg-primary"
+                  color: "bg-primary",
+                  shadow: "shadow-primary/30"
                 },
                 {
-                  step: "2",
+                  icon: <Activity className="w-6 h-6" />,
                   titleKey: "landingPage.howItWorks.step2Title",
                   descKey: "landingPage.howItWorks.step2Desc",
-                  color: "bg-secondary"
+                  color: "bg-secondary",
+                  shadow: "shadow-secondary/30"
                 },
                 {
-                  step: "3",
+                  icon: <Wallet className="w-6 h-6" />,
                   titleKey: "landingPage.howItWorks.step3Title",
                   descKey: "landingPage.howItWorks.step3Desc",
-                  color: "bg-amber-500"
+                  color: "bg-amber-500",
+                  shadow: "shadow-amber-500/30"
                 }
               ].map((item, idx) => (
                 <motion.div
@@ -455,8 +539,8 @@ const LandingPage = React.memo(() => {
                   variants={fadeInUp}
                   className="relative flex flex-col items-center text-center gap-4 p-8"
                 >
-                  <div className={`w-14 h-14 rounded-full ${item.color} text-white flex items-center justify-center text-2xl font-black shadow-lg`}>
-                    {item.step}
+                  <div className={`w-16 h-16 rounded-2xl ${item.color} text-white flex items-center justify-center shadow-xl ${item.shadow} transform rotate-3 transition-transform group-hover:rotate-6`}>
+                    {item.icon}
                   </div>
                   {idx < 2 && (
                     <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5 bg-gray-200">
@@ -525,7 +609,7 @@ const LandingPage = React.memo(() => {
             {/* Brand Column */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center text-text-main">
-                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-6 object-contain" />
+                <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-6 object-contain" />
               </div>
               <p className="text-text-sub text-sm leading-relaxed">
                 {t('landingPage.footer.tagline', 'Aplikasi monitoring listrik prabayar untuk pengguna Indonesia.')}

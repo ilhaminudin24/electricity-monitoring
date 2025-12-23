@@ -98,7 +98,7 @@ export default function ResetPassword() {
             <AuthLayout>
                 <AuthCard>
                     <div className="flex justify-center mb-8">
-                        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-12 object-contain" />
+                        <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-12 object-contain" />
                     </div>
 
                     <div className="text-center py-4">
@@ -134,7 +134,7 @@ export default function ResetPassword() {
             <AuthCard>
                 {/* Logo */}
                 <div className="flex justify-center mb-8">
-                    <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-12 object-contain" />
+                    <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-12 object-contain" />
                 </div>
 
                 {/* Title & Subtitle */}

@@ -15,18 +15,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AuthCallback from './pages/AuthCallback';
 
-// CMS Components
-import CMSLayout from './components/cms/layout/CMSLayout';
-import CMSDashboard from './pages/cms/CMSDashboard';
-import HeroEditor from './pages/cms/HeroEditor';
-import FeaturesEditor from './pages/cms/FeaturesEditor';
-import HowItWorksEditor from './pages/cms/HowItWorksEditor';
-import ScreenshotEditor from './pages/cms/ScreenshotEditor';
-import FooterEditor from './pages/cms/FooterEditor';
-import BottomCTAEditor from './pages/cms/BottomCTAEditor';
-import TestimonialEditor from './pages/cms/TestimonialEditor';
-import UserManagement from './pages/cms/UserManagement';
-import CMSSetup from './pages/CMSSetup';
+
 
 // Get basename for GitHub Pages
 // If homepage is set in package.json, extract the pathname
@@ -59,7 +48,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/cms-setup" element={<CMSSetup />} />
+
 
             {/* Protected routes */}
             <Route path="/dashboard" element={
@@ -83,24 +72,7 @@ function App() {
               </ProtectedRoute>
             } />
 
-            {/* CMS Routes - Admin Only */}
-            <Route path="/cms/*" element={
-              <ProtectedRoute requireAdmin>
-                <CMSLayout>
-                  <Routes>
-                    <Route path="dashboard" element={<CMSDashboard />} />
-                    <Route path="landing-page/hero" element={<HeroEditor />} />
-                    <Route path="landing-page/features" element={<FeaturesEditor />} />
-                    <Route path="landing-page/steps" element={<HowItWorksEditor />} />
-                    <Route path="landing-page/screenshot" element={<ScreenshotEditor />} />
-                    <Route path="landing-page/testimonial" element={<TestimonialEditor />} />
-                    <Route path="landing-page/bottom-cta" element={<BottomCTAEditor />} />
-                    <Route path="landing-page/footer" element={<FooterEditor />} />
-                    <Route path="users" element={<UserManagement />} />
-                  </Routes>
-                </CMSLayout>
-              </ProtectedRoute>
-            } />
+
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

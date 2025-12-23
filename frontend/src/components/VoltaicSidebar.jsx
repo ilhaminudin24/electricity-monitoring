@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSwitcher from './LanguageSwitcher';
+import FeatureTeaserModal from './FeatureTeaserModal';
 import {
     LayoutGrid,
     PlusCircle,
@@ -11,19 +12,28 @@ import {
     BarChart3,
     Settings,
     Zap,
-    LogOut
+    LogOut,
+    FileText,
+    Lock
 } from 'lucide-react';
 
 const VoltaicSidebar = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const { currentUser, logout } = useAuth();
     const location = useLocation();
+    const [teaserFeature, setTeaserFeature] = useState(null);
 
     const menuItems = [
         { path: '/dashboard', label: t('nav.dashboard'), icon: LayoutGrid },
         { path: '/input', label: t('nav.inputReading'), icon: PlusCircle },
         { path: '/history', label: t('nav.history'), icon: History },
-        { path: '/reports', label: t('nav.reports', 'Reports'), icon: BarChart3 }, // Assuming translation key might not exist yet
+        {
+            path: '#reports',
+            label: t('featureTeaser.reports.title', 'Laporan'),
+            icon: FileText,
+            locked: true,
+            featureId: 'REPORTS'
+        },
         { path: '/settings', label: t('nav.settings'), icon: Settings },
     ];
 
@@ -39,13 +49,35 @@ const VoltaicSidebar = ({ isOpen, onClose }) => {
         <div className="flex flex-col h-full bg-white dark:bg-background-dark border-r border-gray-200 dark:border-gray-800 transition-colors duration-200">
             {/* Header / Logo */}
             <div className="p-6 flex items-center">
-                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-10 object-contain" />
+                <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-10 object-contain" />
             </div>
 
             {/* Navigation */}
             <nav className="flex-1 flex flex-col gap-2 px-4 py-4 overflow-y-auto">
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path;
+
+                    if (item.locked) {
+                        return (
+                            <button
+                                key={item.label}
+                                onClick={() => {
+                                    setTeaserFeature(item.featureId);
+                                    if (window.innerWidth < 768) onClose();
+                                }}
+                                className={`
+                                    w-full flex items-center justify-between px-4 py-3 rounded-full transition-all duration-200 group text-text-sub hover:bg-purple-50 dark:hover:bg-purple-900/10 hover:text-purple-600
+                                `}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <item.icon className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                                    <span className="text-sm font-medium">{item.label}</span>
+                                </div>
+                                <Lock className="w-3 h-3 text-gray-400 group-hover:text-purple-500" />
+                            </button>
+                        );
+                    }
+
                     return (
                         <NavLink
                             key={item.path}
@@ -101,6 +133,12 @@ const VoltaicSidebar = ({ isOpen, onClose }) => {
 
     return (
         <>
+            <FeatureTeaserModal
+                isOpen={!!teaserFeature}
+                onClose={() => setTeaserFeature(null)}
+                featureId={teaserFeature}
+            />
+
             {/* Desktop Sidebar */}
             <aside className="hidden md:flex flex-col w-64 h-full fixed left-0 top-0 bottom-0 z-30">
                 <SidebarContent />

@@ -47,7 +47,7 @@ export default function ForgotPassword() {
       <AuthCard>
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-12 object-contain" />
+          <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-12 object-contain" />
         </div>
 
         {!emailSent ? (

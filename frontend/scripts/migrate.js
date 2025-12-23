@@ -186,31 +186,7 @@ async function migrateReadings() {
     }
 }
 
-async function migrateCMS() {
-    console.log('\n--- Migrating CMS Content ---');
-    const snapshot = await db.collection('cms_landing_page').get();
 
-    let count = 0;
-    for (const doc of snapshot.docs) {
-        const sectionId = doc.id;
-        const content = doc.data();
-
-        const { error } = await supabase
-            .from('cms_content')
-            .upsert({
-                section_id: sectionId,
-                content: content,
-                updated_at: new Date().toISOString()
-            });
-
-        if (error) {
-            console.error(`Failed to migrate ${sectionId}:`, error.message);
-        } else {
-            console.log(`Migrated ${sectionId}`);
-            count++;
-        }
-    }
-}
 
 async function run() {
     try {
@@ -219,7 +195,7 @@ async function run() {
         collections.forEach(col => console.log(`- ${col.id}`));
 
         await migrateUsers();
-        await migrateCMS();
+
         await migrateReadings();
         console.log('\nMigration Complete!');
     } catch (err) {

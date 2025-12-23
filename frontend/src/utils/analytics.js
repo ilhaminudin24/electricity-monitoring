@@ -17,7 +17,7 @@ import { aggregateMonthly } from './energy/aggregateMonthly';
 export const calculateDailyUsage = (readings, days = 30) => {
   if (!readings || readings.length === 0) return [];
 
-  console.log('📊 calculateDailyUsage called with:', readings.length, 'readings');
+
 
   // Use new computation logic
   const dailyUsage = computeDailyUsage(readings);
@@ -25,7 +25,7 @@ export const calculateDailyUsage = (readings, days = 30) => {
   // Filter to requested number of days
   const result = dailyUsage.slice(0, days);
 
-  console.log('Daily usage result:', result);
+
   return result;
 };
 
@@ -38,7 +38,7 @@ export const calculateDailyUsage = (readings, days = 30) => {
 export const calculateWeeklyUsage = (readings, weeks = 12) => {
   if (!readings || readings.length === 0) return [];
 
-  console.log('📅 calculateWeeklyUsage called with:', readings.length, 'readings');
+
 
   // First compute daily usage
   const dailyUsage = computeDailyUsage(readings);
@@ -46,7 +46,7 @@ export const calculateWeeklyUsage = (readings, weeks = 12) => {
   // Then aggregate to weekly
   const weeklyUsage = aggregateWeekly(dailyUsage, weeks);
 
-  console.log('Weekly usage result:', weeklyUsage);
+
   return weeklyUsage;
 };
 
@@ -59,7 +59,7 @@ export const calculateWeeklyUsage = (readings, weeks = 12) => {
 export const calculateMonthlyUsage = (readings, months = 12) => {
   if (!readings || readings.length === 0) return [];
 
-  console.log('📆 calculateMonthlyUsage called with:', readings.length, 'readings');
+
 
   // First compute daily usage
   const dailyUsage = computeDailyUsage(readings);
@@ -67,7 +67,7 @@ export const calculateMonthlyUsage = (readings, months = 12) => {
   // Then aggregate to monthly
   const monthlyUsage = aggregateMonthly(dailyUsage, months);
 
-  console.log('Monthly usage result:', monthlyUsage);
+
   return monthlyUsage;
 };
 

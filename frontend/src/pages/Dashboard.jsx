@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllReadings } from '../services/supabaseService';
+import { ChevronDown, Home, Store, Plus } from 'lucide-react'; // Added icons
+import { motion, AnimatePresence } from 'framer-motion'; // Added for dropdown animation
 import {
   calculateDailyUsage,
   calculateWeeklyUsage,
@@ -24,11 +26,17 @@ import EfficiencyScoreCard from '../components/dashboard/EfficiencyScoreCard';
 import AlertBox from '../components/dashboard/AlertBox';
 import RecentReadingsList from '../components/dashboard/RecentReadingsList';
 import GlobalFilterBar from '../components/dashboard/GlobalFilterBar';
+import FeatureTeaserModal from '../components/FeatureTeaserModal';
+import ProUpgradeCard from '../components/ProUpgradeCard'; // Import Upsell Modal
 
 const Dashboard = () => {
   const { t } = useTranslation();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
+
+  // Upsell State
+  const [isMeterDropdownOpen, setIsMeterDropdownOpen] = useState(false);
+  const [teaserFeature, setTeaserFeature] = useState(null);
 
   // Data States
   const [dailyData, setDailyData] = useState([]);
@@ -281,12 +289,74 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-10">
+      <FeatureTeaserModal
+        isOpen={!!teaserFeature}
+        onClose={() => setTeaserFeature(null)}
+        featureId={teaserFeature}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-text-main dark:text-white">{t('dashboard.title')}</h2>
-          <p className="text-text-sub text-sm">{t('dashboard.welcomeBack')}, {currentUser?.displayName || 'User'}</p>
+          {/* Meter Switcher - Discovery Point A */}
+          <div className="relative inline-block">
+            <button
+              onClick={() => setIsMeterDropdownOpen(!isMeterDropdownOpen)}
+              className="flex items-center gap-2 group focus:outline-none"
+            >
+              <h2 className="text-2xl font-bold text-text-main dark:text-white group-hover:text-primary transition-colors">{t('dashboard.title')}</h2>
+              <div className="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full flex items-center gap-2 border border-transparent group-hover:border-primary/20 group-hover:bg-primary/5 transition-all">
+                <Home className="w-3 h-3 text-primary" />
+                <span className="text-xs font-bold text-text-main dark:text-white">Home (Current)</span>
+                <ChevronDown className="w-3 h-3 text-gray-400" />
+              </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {isMeterDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setIsMeterDropdownOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-20 overflow-hidden"
+                  >
+                    <div className="p-2">
+                      <div className="px-3 py-2 bg-primary/5 rounded-lg flex items-center gap-3 mb-1">
+                        <Home className="w-4 h-4 text-primary" />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-text-main">My Home</p>
+                          <p className="text-xs text-text-sub">Current Meter</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setIsMeterDropdownOpen(false);
+                          setTeaserFeature('MULTI_METER');
+                        }}
+                        className="w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-3 transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                          <Plus className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-text-main">Add Property</p>
+                          <p className="text-xs text-blue-500 font-semibold">Pro Feature</p>
+                        </div>
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <p className="text-text-sub text-sm mt-1">{t('dashboard.welcomeBack')}, {currentUser?.displayName || 'User'}</p>
         </div>
+
         <div className="flex items-center gap-4">
           <GlobalFilterBar
             currentFilter={usageFilter}
@@ -301,66 +371,71 @@ const Dashboard = () => {
       </div>
 
 
-      {/* Row 1: Summary Cards (2/3) + Efficiency Score (1/3) */}
+      {/* Main Grid: Left Content (2/3) & Right Sidebar (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Summary Cards */}
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-full">
-            <TotalUsageCard
-              totalKwh={filteredUsage.total}
-              trendPercentage={filteredUsage.trend}
-              chartData={filteredUsage.chartData}
-              timeRange={usageFilter}
+
+        {/* LEFT COLUMN */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Row 1: Usage & Cost */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-full">
+              <TotalUsageCard
+                totalKwh={filteredUsage.total}
+                trendPercentage={filteredUsage.trend}
+                chartData={filteredUsage.chartData}
+                timeRange={usageFilter}
+              />
+            </div>
+            <div className="h-full">
+              <EstCostCard
+                estimatedCost={filteredUsage.estimatedCost}
+                dailyAverageCost={filteredUsage.dailyAvgCost}
+                timeRange={usageFilter}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Prediction */}
+          <TokenPredictionCard
+            daysRemaining={prediction.daysUntilDepletion}
+            hasToken={prediction.hasToken}
+            remainingKwh={prediction.remainingKwh}
+          />
+
+          {/* Row 3: Burn Rate */}
+          <div className="bg-white dark:bg-background-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 p-6">
+            <TokenBurnRateChart
+              projectionData={burnRateData?.projectionData || []}
+              remainingKwh={burnRateData?.remainingKwh || 0}
+              daysRemaining={burnRateData?.daysUntilDepletion}
+              depletionDate={burnRateData?.predictedDepletionDate}
+              avgDailyUsage={burnRateData?.avgDailyUsage || 0}
+              criticalKwh={burnRateData?.criticalKwh || 0}
+              warningKwh={burnRateData?.warningKwh || 0}
+              hasData={burnRateData?.hasData || false}
             />
           </div>
-          <div className="h-full">
-            <EstCostCard
-              estimatedCost={filteredUsage.estimatedCost}
-              dailyAverageCost={filteredUsage.dailyAvgCost}
-              timeRange={usageFilter}
-            />
-          </div>
+
+          {/* Row 4: History */}
+          <TokenBalanceHistoryCard dailyData={dailyData} />
         </div>
-        {/* Right: Efficiency Score - Now More Prominent */}
-        <div className="h-full">
+
+        {/* RIGHT SIDEBAR */}
+        <div className="flex flex-col gap-6">
+          {/* 1. Pro Upgrade (Prime Spot) */}
+          <ProUpgradeCard onClick={() => setTeaserFeature('PRO_UPGRADE')} />
+
+          {/* 2. Efficiency Score */}
           <EfficiencyScoreCard
             score={efficiencyScore}
             hasData={efficiencyScore?.hasData || false}
             message={efficiencyScore?.message || ''}
           />
-        </div>
-      </div>
 
-      {/* Row 2: Token Prediction - Full Width */}
-      <TokenPredictionCard
-        daysRemaining={prediction.daysUntilDepletion}
-        hasToken={prediction.hasToken}
-        remainingKwh={prediction.remainingKwh}
-      />
-
-      {/* Row 3: Token Burn Rate Projection - Full Width (Core Value) */}
-      <div className="bg-white dark:bg-background-dark rounded-2xl shadow-soft border border-gray-100 dark:border-gray-800 p-6">
-        <TokenBurnRateChart
-          projectionData={burnRateData?.projectionData || []}
-          remainingKwh={burnRateData?.remainingKwh || 0}
-          daysRemaining={burnRateData?.daysUntilDepletion}
-          depletionDate={burnRateData?.predictedDepletionDate}
-          avgDailyUsage={burnRateData?.avgDailyUsage || 0}
-          criticalKwh={burnRateData?.criticalKwh || 0}
-          warningKwh={burnRateData?.warningKwh || 0}
-          hasData={burnRateData?.hasData || false}
-        />
-      </div>
-
-      {/* Row 4: Token Balance History (60%) + Sidebar (40%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Left: Token Balance History Chart */}
-        <div className="lg:col-span-3">
-          <TokenBalanceHistoryCard dailyData={dailyData} />
-        </div>
-        {/* Right: Alerts & Recent Activity */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* 3. Alerts */}
           <AlertBox dailyUsage={dailyData} />
+
+          {/* 4. Recent Readings */}
           <RecentReadingsList readings={readings} />
         </div>
       </div>

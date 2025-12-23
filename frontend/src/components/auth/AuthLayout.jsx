@@ -19,7 +19,7 @@ const AuthLayout = ({ children }) => {
                 className="absolute top-6 left-6 z-20 flex items-center text-text-main hover:text-primary transition-colors group"
                 aria-label="Back to Home"
             >
-                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="CatatToken.ID" className="h-10 object-contain group-hover:scale-105 transition-transform" />
+                <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="CatatToken.ID" className="h-10 object-contain group-hover:scale-105 transition-transform" />
             </Link>
 
             {/* Top Right: Language Switcher */}
