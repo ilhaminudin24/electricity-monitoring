@@ -191,11 +191,15 @@ const LandingPage = React.memo(() => {
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-primary/20 to-secondary/20 rounded-full blur-3xl -z-10" />
 
                   {/* Main Image */}
-                  <img
-                    src={`${import.meta.env.BASE_URL}hero-illustration.jpg`}
-                    alt="App Illustration"
-                    className="w-full h-full object-contain drop-shadow-2xl animate-float rounded-[24px]"
-                  />
+                  <picture>
+                    <source srcSet={`${import.meta.env.BASE_URL}hero-illustration.webp`} type="image/webp" />
+                    <img
+                      src={`${import.meta.env.BASE_URL}hero-illustration.jpg`}
+                      alt="App Illustration"
+                      className="w-full h-full object-contain drop-shadow-2xl animate-float rounded-[24px]"
+                      loading="eager"
+                    />
+                  </picture>
 
                   {/* Floating Cards (Decorations) */}
                   <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-xl shadow-soft border border-gray-100 flex items-center gap-3 animate-float-delayed">

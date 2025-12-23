@@ -46,7 +46,7 @@ const LanguageSwitcher = ({ variant = 'default' }) => {
           <span className="text-lg" role="img" aria-label="UK Flag">🇺🇸</span>
         )}
       </div>
-      <span className="text-sm font-semibold text-text-sub min-w-[20px]">
+      <span className="text-sm font-semibold text-text-sub min-w-[20px] hidden sm:inline">
         {isIndonesian ? 'ID' : 'EN'}
       </span>
     </button>
