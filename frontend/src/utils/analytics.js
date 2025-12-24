@@ -121,10 +121,25 @@ export const calculateTokenPrediction = (readings) => {
   const latestReading = sortedReadings[0];
   const remainingKwh = latestReading ? (latestReading.kwh_value || latestReading.reading_kwh) : 0;
 
+  // Helper to format date as YYYY-MM-DD in LOCAL time
+  const formatLocalDate = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const daysUntilDepletion = avgDailyUsage > 0 ? Math.ceil(remainingKwh / avgDailyUsage) : null;
-  const predictedDate = daysUntilDepletion
-    ? new Date(Date.now() + daysUntilDepletion * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    : null;
+
+  // Calculate predicted date using LOCAL time calculations
+  let predictedDate = null;
+  if (daysUntilDepletion !== null) {
+    const targetDate = new Date();
+    targetDate.setHours(0, 0, 0, 0); // Reset to midnight local time
+    targetDate.setDate(targetDate.getDate() + daysUntilDepletion);
+    predictedDate = formatLocalDate(targetDate);
+  }
 
   // Calculate cost per kWh
   const costPerKwh = latestWithToken.token_cost && latestWithToken.token_amount
@@ -133,7 +148,10 @@ export const calculateTokenPrediction = (readings) => {
 
   // Calculate current month usage
   const monthlyUsage = calculateMonthlyUsage(readings, 12);
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  // Fix: Use local time for current month check
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
   const currentMonthData = monthlyUsage.find((m) => m.month === currentMonth);
   const monthlyUsageValue = currentMonthData?.usage_kwh || 0;
   const estimatedMonthlyCost = costPerKwh ? monthlyUsageValue * costPerKwh : null;
@@ -203,10 +221,19 @@ export const calculateBurnRateProjection = (readings) => {
   // Limit projection to max 60 days for chart readability
   const maxProjectionDays = Math.min(daysUntilDepletion, 60);
 
+  // Helper to format date as YYYY-MM-DD in LOCAL time
+  const formatLocalDate = (date) => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Generate projection data points
   const projectionData = [];
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0); // Local midnight
 
   for (let i = 0; i <= maxProjectionDays; i++) {
     const projectedDate = new Date(today);
@@ -215,7 +242,7 @@ export const calculateBurnRateProjection = (readings) => {
     const projectedKwh = Math.max(0, remainingKwh - (avgDailyUsage * i));
 
     projectionData.push({
-      date: projectedDate.toISOString().split('T')[0],
+      date: formatLocalDate(projectedDate), // Use local date formatting
       kwhRemaining: parseFloat(projectedKwh.toFixed(2)),
       isActual: i === 0, // Only first point is actual data
       dayIndex: i,
@@ -225,7 +252,7 @@ export const calculateBurnRateProjection = (readings) => {
   // Predicted depletion date
   const depletionDate = new Date(today);
   depletionDate.setDate(today.getDate() + daysUntilDepletion);
-  const predictedDepletionDate = depletionDate.toISOString().split('T')[0];
+  const predictedDepletionDate = formatLocalDate(depletionDate); // Use local date formatting
 
   // Calculate warning thresholds (dates when reaching critical/warning zones)
   const criticalDays = 3; // Critical: less than 3 days remaining

@@ -39,10 +39,7 @@ A personal web application for recording electricity meter readings (KWh) and pr
 │   │   ├── hooks/            # Custom React hooks
 │   │   ├── i18n/             # Internationalization files
 │   │   ├── pages/            # Page components
-│   │   │   └── cms/          # CMS editor pages
-│   │   ├── services/         # Service layers
 │   │   │   ├── supabaseService.js
-│   │   │   ├── cmsService.js
 │   │   │   └── tariffService.js
 │   │   ├── utils/            # Utility functions
 │   │   ├── App.js

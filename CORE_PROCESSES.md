@@ -71,7 +71,6 @@ flowchart TB
         InputForm["Input Form (Tabbed)"]
         History["History"]
         Settings["Settings"]
-        CMS["CMS (Admin)"]
     end
     
     subgraph CoreComponents["Core Components Layer"]
@@ -96,7 +95,6 @@ flowchart TB
     subgraph Services["Service Layer"]
         SupabaseService["supabaseService.js"]
         TariffService["tariffService.js"]
-        CMSService["cmsService.js"]
     end
     
     subgraph Utils["Utilities Layer"]
