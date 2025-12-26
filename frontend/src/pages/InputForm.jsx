@@ -3,8 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { addReading, getLastReading, getLastReadingBeforeDate, checkReadingExists, deleteReading, updateReading, getReadingsAfterDate, bulkUpdateReadingsKwh } from '../services/supabaseService';
+import {
+  addEvent,
+  validateBackdateOperation,
+  performCascadingRecalculation,
+  previewBackdateImpact,
+  getEventsAfterDate,
+  EVENT_TYPES,
+  TRIGGER_TYPES
+} from '../services/eventService';
 import DuplicateDateModal from '../components/DuplicateDateModal';
-import BackdateRecalculationModal from '../components/BackdateRecalculationModal';
+import RecalculationTimelineModal from '../components/RecalculationTimelineModal';
 import EditReadingModal from '../components/EditReadingModal';
 import { formatRupiah, parseRupiah, formatRupiahInput } from '../utils/rupiah';
 import { toDateTimeLocalInput, fromDateTimeLocalInput } from '../utils/date';
@@ -59,10 +68,11 @@ const InputForm = () => {
   const [showAnomalyModal, setShowAnomalyModal] = useState(false);
   const [anomalyDetails, setAnomalyDetails] = useState(null);
 
-  // Backdate recalculation state
+  // Backdate recalculation state (Event Sourcing)
   const [showRecalculationModal, setShowRecalculationModal] = useState(false);
   const [affectedReadings, setAffectedReadings] = useState([]);
   const [kwhOffset, setKwhOffset] = useState(0);
+  const [validationIssues, setValidationIssues] = useState([]);
 
   // Fetch last reading BEFORE the selected date (date-aware validation)
   // This ensures validation compares against the correct previous reading
@@ -282,14 +292,29 @@ const InputForm = () => {
 
       // No duplicate, check for backdate recalculation (Top-Up mode only)
       if (activeTab === 'topup') {
-        const readingsAfter = await getReadingsAfterDate(currentUser.id, formData.date);
+        const purchasedKwh = parseFloat(formData.token_amount) || calculatedTokenAmount || 0;
 
-        if (readingsAfter.length > 0) {
-          // Calculate offset = kWh purchased
-          const purchasedKwh = parseFloat(formData.token_amount) || calculatedTokenAmount || 0;
+        // Use event sourcing to get affected events
+        const eventsAfter = await getEventsAfterDate(currentUser.id, formData.date);
 
-          setAffectedReadings(readingsAfter);
+        if (eventsAfter.length > 0) {
+          // Validate that this backdate won't cause illogical data
+          const validation = await validateBackdateOperation(
+            currentUser.id,
+            formData.date,
+            purchasedKwh
+          );
+
+          // Get preview of impact
+          const preview = await previewBackdateImpact(
+            currentUser.id,
+            formData.date,
+            purchasedKwh
+          );
+
+          setAffectedReadings(preview);
           setKwhOffset(purchasedKwh);
+          setValidationIssues(validation.issues);
           setPendingSubmission(readingData);
           setShowRecalculationModal(true);
           setLoading(false);
@@ -413,29 +438,65 @@ const InputForm = () => {
     }, 50);
   };
 
-  // Handle backdate recalculation confirmation
+  // Handle backdate recalculation confirmation (Event Sourcing)
   const handleRecalculationConfirm = async () => {
     try {
       setLoading(true);
       setShowRecalculationModal(false);
 
-      // 1. Save the new backdate top-up reading
-      await saveReading(pendingSubmission);
+      // 1. Save the new backdate top-up reading first (to old table for compatibility)
+      const savedReading = await addReading(currentUser.id, pendingSubmission, photoFile);
 
-      // 2. Update all affected readings (add offset to kwh_value)
-      const updates = affectedReadings.map(reading => ({
-        id: reading.id,
-        kwh_value: reading.kwh_value + kwhOffset
-      }));
+      // 2. Also track in new event sourcing system
+      const tokenCostNumeric = pendingSubmission.token_cost || 0;
+      const eventResult = await addEvent(currentUser.id, {
+        eventType: EVENT_TYPES.TOPUP,
+        eventDate: pendingSubmission.date,
+        kwhAmount: kwhOffset,
+        tokenCost: tokenCostNumeric,
+        notes: pendingSubmission.notes
+      });
 
-      await bulkUpdateReadingsKwh(updates);
+      // 3. Create recalculation batch for audit trail and rollback capability
+      if (affectedReadings.length > 0 && eventResult.event) {
+        await performCascadingRecalculation(
+          currentUser.id,
+          eventResult.event.id,
+          TRIGGER_TYPES.BACKDATE_TOPUP,
+          affectedReadings,
+          kwhOffset
+        );
+      }
 
-      // Success - clear backdate state
+      // 4. Update all affected readings in OLD table (electricity_readings)
+      // We need to fetch from electricity_readings table, not use token_events IDs
+      const readingsFromOldTable = await getReadingsAfterDate(currentUser.id, pendingSubmission.date);
+
+      if (readingsFromOldTable.length > 0) {
+        const updates = readingsFromOldTable.map(reading => ({
+          id: reading.id,
+          kwh_value: (reading.kwh_value || 0) + kwhOffset
+        }));
+
+        await bulkUpdateReadingsKwh(updates);
+      }
+
+      // Success - show success message and navigate
+      setSuccess(true);
       setAffectedReadings([]);
       setKwhOffset(0);
+      setValidationIssues([]);
       setPendingSubmission(null);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
 
     } catch (err) {
+      console.error('Recalculation error:', err);
       setError(err.message || 'Failed to update readings');
       setLoading(false);
     }
@@ -719,20 +780,23 @@ const InputForm = () => {
         onSwitchToTopUp={handleSwitchToTopUp}
       />
 
-      {/* Backdate Recalculation Modal */}
-      <BackdateRecalculationModal
+      {/* Backdate Recalculation Modal (Event Sourcing) */}
+      <RecalculationTimelineModal
         isOpen={showRecalculationModal}
         onClose={() => {
           setShowRecalculationModal(false);
           setAffectedReadings([]);
           setKwhOffset(0);
+          setValidationIssues([]);
           setPendingSubmission(null);
         }}
         onConfirm={handleRecalculationConfirm}
         backdateDate={formData.date}
-        affectedReadings={affectedReadings}
-        kwhOffset={kwhOffset}
+        affectedEvents={affectedReadings}
+        newTopupKwh={kwhOffset}
+        tokenCost={parseRupiah(formData.token_cost) || 0}
         loading={loading}
+        validationIssues={validationIssues}
       />
     </div>
   );

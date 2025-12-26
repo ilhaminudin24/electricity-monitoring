@@ -363,20 +363,35 @@ export const deleteUser = async (userId) => {
 // Check if a reading already exists for a specific date
 export const checkReadingExists = async (userId, date) => {
     try {
-        // Normalize to date only (YYYY-MM-DD) using LOCAL time, not UTC
-        // toISOString() shifts to UTC which might be yesterday for Asia/Jakarta
+        // Parse the incoming date (could be UTC ISO string or datetime-local format)
         const dateObj = new Date(date);
+
+        if (isNaN(dateObj.getTime())) {
+            console.error('Invalid date input:', date);
+            return null;
+        }
+
+        // Get LOCAL date components (user's perspective)
         const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const dateOnly = `${year}-${month}-${day}`;
+        const month = dateObj.getMonth(); // 0-indexed
+        const day = dateObj.getDate();
+
+        // Create start and end of LOCAL day, then convert to UTC for Supabase query
+        // Start of local day (00:00:00 local)
+        const startOfLocalDay = new Date(year, month, day, 0, 0, 0, 0);
+        // End of local day (23:59:59.999 local)
+        const endOfLocalDay = new Date(year, month, day, 23, 59, 59, 999);
+
+        // Convert to ISO strings (which are UTC) for Supabase timestamptz comparison
+        const startUtc = startOfLocalDay.toISOString();
+        const endUtc = endOfLocalDay.toISOString();
 
         const { data, error } = await supabase
             .from('electricity_readings')
             .select('id, date, kwh_value, token_cost, notes, created_at')
             .eq('user_id', userId)
-            .gte('date', dateOnly)
-            .lt('date', `${dateOnly}T23:59:59.999Z`)
+            .gte('date', startUtc)
+            .lte('date', endUtc)
             .limit(1)
             .maybeSingle();
 

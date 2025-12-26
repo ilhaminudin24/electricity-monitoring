@@ -34,8 +34,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Docs
-docs
 
 # Backend
 backend/node_modules/

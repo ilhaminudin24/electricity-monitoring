@@ -19,6 +19,7 @@ import {
 import { downloadCSV } from '../utils/exportUtils';
 import EditReadingModal from '../components/EditReadingModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import RecalculationHistoryPanel from '../components/RecalculationHistoryPanel';
 import { useNavigate } from 'react-router-dom';
 
 const History = () => {
@@ -311,6 +312,9 @@ const History = () => {
           </div>
         </div>
       </div>
+
+      {/* Recalculation History Panel (24-hour Undo) */}
+      <RecalculationHistoryPanel className="animate-fadeIn" />
 
       {/* Data Table Card */}
       <div className="bg-white dark:bg-[#151f2e] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col">

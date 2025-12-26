@@ -408,5 +408,34 @@
             "title": "Scan Electric Meter",
             "desc": "Lazy to type? Snap a photo of your meter and our AI will read the kWh digits automatically."
         }
+    },
+    "recalculation": {
+        "title": "Data Adjustment Required",
+        "blocked": "Operation Cannot Be Performed",
+        "backdateTo": "You are adding a top-up for {{date}}",
+        "validationError": "Data will become invalid",
+        "newTopup": "New Top-up",
+        "affectedReadings": "Affected Readings",
+        "topupsAffected": "Other Top-ups Affected",
+        "timeline": "Meter Position Changes",
+        "date": "Date",
+        "type": "Type",
+        "before": "Before",
+        "after": "After",
+        "consumptionUnchanged": "Your daily consumption remains the same",
+        "undoAvailable": "Changes can be undone within 24 hours",
+        "cancel": "Cancel",
+        "confirm": "Continue & Update All",
+        "pendingRollbacks": "Changes That Can Be Undone",
+        "records": "records",
+        "undo": "Undo",
+        "rollbackReason": "Reason for undo (optional):",
+        "rollbackSuccess": "Changes successfully undone",
+        "rollbackFailed": "Failed to undo changes",
+        "triggerBackdate": "Backdate Top-up",
+        "triggerEdit": "Edit Top-up",
+        "triggerDelete": "Delete Top-up",
+        "triggerManual": "Manual Correction",
+        "affectedDetails": "Change Details"
     }
 }

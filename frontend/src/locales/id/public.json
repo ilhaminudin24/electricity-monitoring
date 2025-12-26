@@ -408,5 +408,34 @@
             "title": "Scan Meteran Listrik",
             "desc": "Malas catat manual? Foto meteran listrik Anda dan AI kami akan membaca angka kwh secara otomatis."
         }
+    },
+    "recalculation": {
+        "title": "Penyesuaian Data Diperlukan",
+        "blocked": "Operasi Tidak Dapat Dilakukan",
+        "backdateTo": "Anda menambahkan isi ulang untuk tanggal {{date}}",
+        "validationError": "Data akan menjadi tidak valid",
+        "newTopup": "Top-up Baru",
+        "affectedReadings": "Catatan Terpengaruh",
+        "topupsAffected": "Top-up Lain Terpengaruh",
+        "timeline": "Perubahan Posisi Meter",
+        "date": "Tanggal",
+        "type": "Tipe",
+        "before": "Sebelum",
+        "after": "Sesudah",
+        "consumptionUnchanged": "Konsumsi harian Anda tetap sama",
+        "undoAvailable": "Perubahan dapat dibatalkan dalam 24 jam",
+        "cancel": "Batal",
+        "confirm": "Lanjutkan & Update Semua",
+        "pendingRollbacks": "Perubahan yang Dapat Dibatalkan",
+        "records": "catatan",
+        "undo": "Batalkan",
+        "rollbackReason": "Alasan pembatalan (opsional):",
+        "rollbackSuccess": "Perubahan berhasil dibatalkan",
+        "rollbackFailed": "Gagal membatalkan perubahan",
+        "triggerBackdate": "Top-up Backdate",
+        "triggerEdit": "Edit Top-up",
+        "triggerDelete": "Hapus Top-up",
+        "triggerManual": "Koreksi Manual",
+        "affectedDetails": "Detail Perubahan"
     }
 }
