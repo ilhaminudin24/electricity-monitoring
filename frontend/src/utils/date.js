@@ -16,7 +16,7 @@ export const formatDateTimeLocal = (dateInput) => {
 
   try {
     let date;
-    
+
     // Handle different input types
     if (dateInput instanceof Date) {
       date = dateInput;
@@ -26,7 +26,7 @@ export const formatDateTimeLocal = (dateInput) => {
     } else if (typeof dateInput === 'string') {
       // String format
       let datePart, timePart;
-      
+
       if (dateInput.includes('T')) {
         // ISO format
         [datePart, timePart] = dateInput.split('T');
@@ -139,7 +139,7 @@ export const toDateTimeLocalInput = (dateInput) => {
 
   try {
     let date;
-    
+
     // Handle different input types
     if (dateInput instanceof Date) {
       date = dateInput;
@@ -177,20 +177,45 @@ export const toDateTimeLocalInput = (dateInput) => {
 };
 
 /**
- * Parse datetime-local input value to ISO string
- * Input: "2025-11-16T19:00" (from datetime-local input)
- * Output: "2025-11-16T19:00:00"
+ * Parse datetime-local input value to ISO string with timezone
+ * Input: "2025-11-16T19:00" (from datetime-local input, represents LOCAL time)
+ * Output: "2025-11-16T12:00:00.000Z" (UTC ISO string, correct point in time)
+ * 
+ * This is critical for Supabase timestamptz fields - the datetime-local input
+ * represents local time, and we need to convert it to UTC for proper storage.
  */
 export const fromDateTimeLocalInput = (inputValue) => {
   if (!inputValue) return null;
 
   try {
-    // datetime-local format is YYYY-MM-DDTHH:mm
-    // Add seconds if not present
-    if (inputValue.length === 16) {
-      return inputValue + ':00';
+    // datetime-local format is usually YYYY-MM-DDTHH:mm
+    // We must manually parse it to ensure it's treated as LOCAL time,
+    // because new Date(string) behavior with ISO-like strings can be inconsistent (sometimes UTC).
+
+    let date;
+
+    // Check if format is likely YYYY-MM-DDTHH:mm
+    if (inputValue.includes('T')) {
+      const [datePart, timePart] = inputValue.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+
+      // key step: use the constructor that treats arguments as local time
+      date = new Date(year, month - 1, day, hours, minutes);
+    } else {
+      // Fallback
+      date = new Date(inputValue);
     }
-    return inputValue;
+
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date from datetime-local input:', inputValue);
+      return null;
+    }
+
+    // toISOString() returns UTC time with Z suffix
+    // Since 'date' was constructed as local time, this will correctly convert to UTC
+    // Example: 23:31 Jakarta (UTC+7) -> 16:31 UTC
+    return date.toISOString();
   } catch (error) {
     console.error('Error parsing datetime-local input:', error);
     return null;
