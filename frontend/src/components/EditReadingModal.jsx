@@ -5,9 +5,14 @@ import { calculateTokenAmount } from '../utils/settings';
 import { toDateTimeLocalInput, fromDateTimeLocalInput } from '../utils/date';
 import { validateReading, getValidationMessage } from '../utils/validationService';
 import { Zap, Activity, ArrowRight, X, AlertTriangle } from 'lucide-react';
-import { supabase } from '../supabaseClient'; // Import supabase for custom query
+import { supabase } from '../supabaseClient';
+import {
+  getEventsAfterDate,
+  previewBackdateImpact,
+  validateBackdateOperation
+} from '../services/eventService';
 
-const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
+const EditReadingModal = ({ isOpen, onClose, reading, onSave, onRecalculationNeeded }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     reading_kwh: '',
@@ -23,6 +28,9 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
   // Validation state
   const [prevReading, setPrevReading] = useState(null);
   const [validationHint, setValidationHint] = useState(null);
+
+  // Anomaly blocking state (for reading mode - same as InputForm)
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // Determine if this is a Top Up entry
   const isTopUp = reading?.token_cost && reading.token_cost > 0;
@@ -166,6 +174,22 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
       return;
     }
 
+    // BUSINESS LOGIC VALIDATION (HARD BLOCK for reading mode - same as InputForm)
+    if (!isTopUp && prevReading) {
+      const validationResult = validateReading(
+        parseFloat(formData.reading_kwh),
+        prevReading,
+        false
+      );
+
+      if (validationResult.isBlocking) {
+        setError(t('validation.readingMustBeLower', { lastReading: prevReading }) +
+          ' ' + t('validation.useTopUpInstead', 'Jika Anda melakukan top-up, silakan edit entry sebagai Top Up.'));
+        setIsBlocked(true);
+        return; // HARD STOP
+      }
+    }
+
     try {
       setLoading(true);
       const created_at = formData.created_at
@@ -177,10 +201,54 @@ const EditReadingModal = ({ isOpen, onClose, reading, onSave }) => {
         kwh: parseFloat(formData.reading_kwh),
         reading_kwh: parseFloat(formData.reading_kwh),
         token_cost: tokenCostNumeric,
+        token_amount: calculatedTokenAmount || null,
         notes: formData.notes || null,
         created_at: created_at,
       };
 
+      // Check for backdate recalculation (Top-Up mode only)
+      if (isTopUp && onRecalculationNeeded) {
+        const userId = reading.user_id || reading.userId;
+        const eventsAfter = await getEventsAfterDate(userId, formData.created_at);
+
+        if (eventsAfter.length > 0) {
+          // Calculate kWh difference (new - old)
+          const oldKwh = reading.token_amount || 0;
+          const newKwh = calculatedTokenAmount || 0;
+          const kwhDiff = newKwh - oldKwh;
+
+          if (Math.abs(kwhDiff) > 0.01) { // Only trigger if there's an actual difference
+            // Validate that this edit won't cause illogical data
+            const validation = await validateBackdateOperation(
+              userId,
+              formData.created_at,
+              kwhDiff
+            );
+
+            // Get preview of impact
+            const preview = await previewBackdateImpact(
+              userId,
+              formData.created_at,
+              kwhDiff
+            );
+
+            // Delegate to parent component
+            onRecalculationNeeded({
+              readingId: reading.id,
+              payload,
+              affectedReadings: preview,
+              kwhOffset: kwhDiff,
+              validationIssues: validation.issues || [],
+              backdateDate: formData.created_at,
+              tokenCost: tokenCostNumeric || 0
+            });
+            setLoading(false);
+            return; // Wait for parent to handle confirmation
+          }
+        }
+      }
+
+      // No backdate recalculation needed, proceed with save
       await onSave(reading.id, payload);
       onClose();
     } catch (err) {

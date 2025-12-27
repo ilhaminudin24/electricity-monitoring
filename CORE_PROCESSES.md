@@ -13,6 +13,8 @@
 - [UI/UX Features](#uiux-features)
   - [7. Internationalization (i18n)](#7-internationalization-i18n)
   - [8. Premium UI Design System](#8-premium-ui-design-system)
+- [Event Sourcing](#event-sourcing)
+  - [9. Event Sourcing & Backdate Recalculation](#9-event-sourcing--backdate-recalculation)
 - [Data Flow Overview](#data-flow-overview)
 
 ---
@@ -716,7 +718,7 @@ flowchart TD
         D7[Actions Column - Edit/Delete]
     end
     
-    subgraph EditFlow["Edit Reading Flow (Mode-Locked)"]
+    subgraph EditFlow["Edit Reading Flow (Enhanced)"]
         E1[Click Edit Button]
         E2[Open EditReadingModal]
         E3{Reading Type?}
@@ -724,19 +726,32 @@ flowchart TD
         E5[Top Up Mode - Yellow Theme]
         E6[Load Current Values]
         E7[User Modifies Data]
-        E8[Validate Changes]
-        E9[Call updateReading API]
-        E10{Success?}
-        E11[Close Modal + Show Success]
-        E12[Refresh List]
-        E13[Show Error]
+        E8{Validate Changes}
+        E9{Anomaly Detected?}
+        E10[Show Error - Hard Block]
+        E11{Top Up Backdate?}
+        E12[Show RecalculationTimelineModal]
+        E13{User Confirms?}
+        E14[Perform Cascading Recalculation]
+        E15[Call updateReading API]
+        E16{Success?}
+        E17[Close Modal + Refresh List]
+        E18[Show Error]
         
         E1 --> E2 --> E3
         E3 -->|Reading| E4 --> E6
         E3 -->|Top Up| E5 --> E6
-        E6 --> E7 --> E8 --> E9 --> E10
-        E10 -->|Yes| E11 --> E12
-        E10 -->|No| E13
+        E6 --> E7 --> E8
+        E8 -->|Invalid| E9
+        E9 -->|Reading Increased| E10
+        E8 -->|Valid| E11
+        E11 -->|Has Events After| E12 --> E13
+        E13 -->|Confirm| E14 --> E15
+        E13 -->|Cancel| E2
+        E11 -->|No Backdate| E15
+        E15 --> E16
+        E16 -->|Yes| E17
+        E16 -->|No| E18
     end
     
     subgraph DeleteFlow["Delete Reading Flow"]
@@ -763,13 +778,56 @@ flowchart TD
     end
 ```
 
+#### Edit Modal with Validation & Recalculation
+
+The `EditReadingModal` now includes the same validation and backdate handling as `InputForm`:
+
+```mermaid
+flowchart TD
+    subgraph EditValidation["Edit Validation Flow"]
+        Start([User Submits Edit]) --> CheckType{Entry Type?}
+        
+        CheckType -->|Reading| ValidateReading
+        CheckType -->|Top Up| ValidateTopUp
+        
+        subgraph ValidateReading["Reading Validation"]
+            VR1[Get Previous Reading]
+            VR2{New kWh < Previous?}
+            VR3[✅ Valid - Proceed]
+            VR4[❌ Block - Show Error]
+            
+            VR1 --> VR2
+            VR2 -->|Yes| VR3
+            VR2 -->|No| VR4
+        end
+        
+        subgraph ValidateTopUp["Top-Up Backdate Check"]
+            VT1[Check Events After Date]
+            VT2{Has Later Events?}
+            VT3[Calculate kWh Difference]
+            VT4[Show RecalculationTimelineModal]
+            VT5[Save Directly]
+            
+            VT1 --> VT2
+            VT2 -->|Yes| VT3 --> VT4
+            VT2 -->|No| VT5
+        end
+    end
+```
+
+> [!IMPORTANT]
+> **Reading Mode Edit**: If user tries to save a kWh value that is **higher** than the previous reading, the save is **blocked** with an error message. This is the same logic as InputForm.
+
+> [!NOTE]
+> **Top-Up Backdate Edit**: If editing a top-up entry that has events after it, the `RecalculationTimelineModal` is shown to preview and confirm the cascading kWh updates. This uses the Event Sourcing system.
+
 #### Edit Modal Mode-Locking
 
 ```mermaid
 flowchart LR
     subgraph EditModalModes["EditReadingModal - Mode-Locked Editing"]
-        ReadingEdit["Reading Mode Edit<br/>• Blue theme<br/>• Only reading fields<br/>• Validates consumption"]
-        TopUpEdit["Top Up Mode Edit<br/>• Yellow theme<br/>• Token cost fields<br/>• Auto-calculate kWh"]
+        ReadingEdit["Reading Mode Edit<br/>• Blue theme<br/>• Validates consumption<br/>• Blocks if kWh increased"]
+        TopUpEdit["Top Up Mode Edit<br/>• Yellow theme<br/>• Token cost fields<br/>• Triggers recalculation if backdate"]
     end
     
     ReadingEntry["Reading Entry"] -->|Edit| ReadingEdit
@@ -779,9 +837,11 @@ flowchart LR
 #### Key Files
 | File | Responsibility |
 |------|----------------|
-| [History.jsx](file:///d:/Project/electricity-monitoring/frontend/src/pages/History.jsx) | Premium history page with filters |
-| [EditReadingModal.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/EditReadingModal.jsx) | Mode-locked edit modal |
+| [History.jsx](file:///d:/Project/electricity-monitoring/frontend/src/pages/History.jsx) | Premium history page with filters, recalculation handlers |
+| [EditReadingModal.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/EditReadingModal.jsx) | Mode-locked edit modal with validation & backdate detection |
+| [RecalculationTimelineModal.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/RecalculationTimelineModal.jsx) | Backdate recalculation preview modal |
 | [DeleteConfirmationModal.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/DeleteConfirmationModal.jsx) | Delete confirmation modal |
+| [eventService.js](file:///d:/Project/electricity-monitoring/frontend/src/services/eventService.js) | Event sourcing for backdate operations |
 | [supabaseService.js](file:///d:/Project/electricity-monitoring/frontend/src/services/supabaseService.js) | CRUD operations |
 
 ---
@@ -1178,6 +1238,231 @@ flowchart TB
 
 ---
 
+### 9. Event Sourcing & Backdate Recalculation
+
+The application implements an **Event Sourcing** pattern for handling backdate top-up operations, allowing full audit trails and 24-hour rollback capability.
+
+#### Core Concept
+
+```mermaid
+flowchart TB
+    subgraph EventSourcing["Event Sourcing Architecture"]
+        subgraph Events["Immutable Events"]
+            TOPUP["TOPUP Event<br/>+kWh added to balance"]
+            READING["METER_READING Event<br/>kWh consumed"]
+            ADJUSTMENT["ADJUSTMENT Event<br/>Manual corrections"]
+            VOID["VOID Event<br/>Soft delete reference"]
+        end
+        
+        subgraph DerivedState["Derived State (Calculated)"]
+            Position["Meter Position<br/>Calculated from events"]
+            Consumption["Daily Consumption<br/>Position delta"]
+        end
+        
+        Events --> |Calculate| DerivedState
+    end
+```
+
+#### Event Types
+
+| Event Type | Description | Use Case |
+|------------|-------------|----------|
+| `TOPUP` | Token purchase adding kWh | User buys electricity token |
+| `METER_READING` | Meter position recording | User records current meter value |
+| `ADJUSTMENT` | Manual correction | Admin fixes incorrect data |
+| `VOID` | Soft delete marker | Rollback/undo operations |
+
+#### Trigger Types
+
+| Trigger Type | Description |
+|--------------|-------------|
+| `BACKDATE_TOPUP` | Top-up inserted before existing records |
+| `EDIT_TOPUP` | Existing top-up modified |
+| `DELETE_TOPUP` | Top-up deleted |
+| `MANUAL_CORRECTION` | Admin manual fix |
+
+#### Backdate Top-Up Flow
+
+When a user enters a top-up with a past date, all subsequent readings must be recalculated.
+
+```mermaid
+flowchart TD
+    Start([User Submits Backdate Top-Up]) --> CheckDate{Date Before Latest Reading?}
+    
+    CheckDate --> |No - Normal Flow| SaveNormal[Save Normally]
+    CheckDate --> |Yes - Backdate Detected| FetchAffected
+    
+    subgraph BackdateFlow["Backdate Recalculation Flow"]
+        FetchAffected[Fetch Events After Backdate Date]
+        Validate[Validate Operation]
+        Validate --> ValidCheck{Validation Passed?}
+        ValidCheck --> |No - Would Cause Issues| ShowError[Show Validation Errors]
+        ValidCheck --> |Yes| Preview[Generate Preview Impact]
+        Preview --> ShowModal[Show RecalculationTimelineModal]
+        
+        FetchAffected --> Validate
+    end
+    
+    ShowModal --> UserChoice{User Confirms?}
+    
+    UserChoice --> |Cancel| Cancel[Cancel Operation]
+    UserChoice --> |Confirm| ExecuteRecalc
+    
+    subgraph ExecuteRecalc["Execute Recalculation"]
+        E1[Save New Top-Up to electricity_readings]
+        E2[Create Event in token_events]
+        E3[Create Recalculation Batch]
+        E4[Bulk Update Affected Readings + kWh Offset]
+        E5[Link Batch to Affected Events]
+        
+        E1 --> E2 --> E3 --> E4 --> E5
+    end
+    
+    ExecuteRecalc --> Success[Show Success + Navigate to Dashboard]
+```
+
+#### Database Schema
+
+```mermaid
+erDiagram
+    token_events {
+        uuid id PK
+        uuid user_id FK
+        text event_type
+        timestamp event_date
+        decimal kwh_amount
+        decimal token_cost
+        text notes
+        text meter_photo_url
+        boolean is_voided
+        timestamp voided_at
+        uuid voided_by
+        text voided_reason
+        uuid void_of_event FK
+        uuid recalc_batch_id FK
+        jsonb metadata
+        timestamp created_at
+        uuid created_by
+    }
+    
+    recalculation_batches {
+        uuid id PK
+        uuid user_id FK
+        text trigger_type
+        uuid trigger_event_id FK
+        jsonb affected_events
+        integer events_count
+        timestamp rolled_back_at
+        text rollback_reason
+        timestamp can_rollback_until
+        timestamp created_at
+        uuid created_by
+    }
+    
+    electricity_readings {
+        uuid id PK
+        uuid user_id FK
+        timestamp date
+        decimal kwh_value
+        decimal token_cost
+        decimal token_amount
+        text notes
+    }
+    
+    user_profiles ||--o{ token_events : has
+    user_profiles ||--o{ recalculation_batches : has
+    user_profiles ||--o{ electricity_readings : has
+    token_events ||--o{ recalculation_batches : triggers
+```
+
+#### Dual-Write Strategy
+
+For **backward compatibility**, the system writes to both the legacy `electricity_readings` table and the new `token_events` table:
+
+```mermaid
+flowchart LR
+    subgraph DualWrite["Dual-Write Strategy"]
+        Input[Top-Up Input] --> Both
+        Both --> Legacy[electricity_readings<br/>Legacy Table]
+        Both --> New[token_events<br/>Event Sourcing Table]
+    end
+    
+    Legacy --> OldCode[Existing Features<br/>Dashboard, History, etc.]
+    New --> NewFeatures[Event Sourcing Features<br/>Rollback, Audit Trail]
+```
+
+#### 24-Hour Rollback Capability
+
+Users can undo backdate recalculations within 24 hours:
+
+```mermaid
+flowchart TD
+    subgraph RollbackFlow["Rollback Flow"]
+        HistoryPage[History Page] --> Panel[RecalculationHistoryPanel]
+        Panel --> ShowBatches[Show Pending Rollback Batches]
+        
+        ShowBatches --> BatchInfo["Batch Info Display<br/>• Trigger type<br/>• Events affected count<br/>• Time remaining"]
+        
+        BatchInfo --> UndoButton[Click Undo Button]
+        UndoButton --> ConfirmDialog[Confirm Rollback]
+        ConfirmDialog --> |Yes| ExecuteRollback
+        
+        subgraph ExecuteRollback["Execute Rollback"]
+            R1[Void Trigger Event]
+            R2[Mark Batch as Rolled Back]
+            R3[Recalculate Positions]
+            
+            R1 --> R2 --> R3
+        end
+        
+        ExecuteRollback --> RefreshUI[Refresh History Page]
+    end
+    
+    CheckWindow{Within 24 Hours?}
+    CheckWindow --> |Yes| ShowBatches
+    CheckWindow --> |No - Expired| HideBatch[Hide from Panel]
+```
+
+#### Validation Rules
+
+Before allowing a backdate operation, the system validates:
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Negative Position | BLOCK | Would meter position become negative? |
+| Negative Consumption | WARN | Would any day show negative consumption? |
+| Data Integrity | BLOCK | Would the operation cause data inconsistency? |
+
+#### Key Files
+
+| File | Responsibility |
+|------|----------------|
+| [eventService.js](file:///d:/Project/electricity-monitoring/frontend/src/services/eventService.js) | Event Sourcing core operations |
+| [RecalculationTimelineModal.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/RecalculationTimelineModal.jsx) | Visual preview of backdate impact |
+| [RecalculationHistoryPanel.jsx](file:///d:/Project/electricity-monitoring/frontend/src/components/RecalculationHistoryPanel.jsx) | 24-hour rollback UI in History page |
+| [supabaseService.js](file:///d:/Project/electricity-monitoring/frontend/src/services/supabaseService.js) | `getReadingsAfterDate()`, `bulkUpdateReadingsKwh()` |
+
+#### Service Functions
+
+**eventService.js:**
+- `addEvent()` - Add new event with backdate detection
+- `checkForBackdate()` - Check if date would be a backdate
+- `validateBackdateOperation()` - Validate backdate won't cause issues
+- `performCascadingRecalculation()` - Execute recalculation with audit
+- `previewBackdateImpact()` - Preview position changes
+- `getPendingRollbacks()` - Get undoable batches
+- `rollbackRecalculation()` - Undo a recalculation
+- `voidEvent()` - Soft delete an event
+
+**supabaseService.js (New Functions):**
+- `getReadingsAfterDate()` - Fetch readings after a specific date
+- `bulkUpdateReadingsKwh()` - Parallel update multiple readings' kWh values
+
+> [!IMPORTANT]
+> The Event Sourcing implementation uses a **dual-write** strategy. Data is written to both `electricity_readings` (legacy) and `token_events` (new) tables to maintain backward compatibility with existing features.
+
+---
+
 ## Data Flow Overview
 
 ### Complete Application Data Flow
@@ -1286,6 +1571,7 @@ This documentation covers the core processes and features of the Electricity Mon
 | 6 | **Token Calculation** | Tiered tariff system for accurate kWh estimation |
 | 7 | **Internationalization** | Full English and Indonesian language support |
 | 8 | **Premium UI Design** | Modern glassmorphism with consistent theming |
+| 9 | **Event Sourcing** | Backdate recalculation with 24-hour rollback capability |
 
 ### Integration Points
 
@@ -1313,4 +1599,7 @@ All processes are integrated through:
 | **Chart Improvements** | Top-up markers, weekly date ranges, chronological sorting |
 | **Premium Redesign** | All pages upgraded to glassmorphism design |
 | **Full i18n Support** | Complete translations for EN and ID languages |
+| **Event Sourcing** | Backdate Top-Up with cascading recalculation and audit trail |
+| **24-Hour Rollback** | Undo backdate operations within 24-hour window |
+| **Dual-Write Strategy** | Backward compatibility writing to both legacy and new tables |
 

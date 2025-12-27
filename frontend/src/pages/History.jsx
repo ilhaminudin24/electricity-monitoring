@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllReadings, updateReading, deleteReading, getUserSettings } from '../services/supabaseService';
+import { getAllReadings, updateReading, deleteReading, getUserSettings, getReadingsAfterDate, bulkUpdateReadingsKwh } from '../services/supabaseService';
 import { formatDateTimeLocal } from '../utils/date';
 import { formatRupiah } from '../utils/rupiah';
 import {
@@ -20,7 +20,14 @@ import { downloadCSV } from '../utils/exportUtils';
 import EditReadingModal from '../components/EditReadingModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import RecalculationHistoryPanel from '../components/RecalculationHistoryPanel';
+import RecalculationTimelineModal from '../components/RecalculationTimelineModal';
 import { useNavigate } from 'react-router-dom';
+import {
+  addEvent,
+  performCascadingRecalculation,
+  EVENT_TYPES,
+  TRIGGER_TYPES
+} from '../services/eventService';
 
 const History = () => {
   const { t } = useTranslation();
@@ -45,6 +52,17 @@ const History = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedReading, setSelectedReading] = useState(null);
+
+  // Recalculation State (same as InputForm)
+  const [showRecalculationModal, setShowRecalculationModal] = useState(false);
+  const [affectedReadings, setAffectedReadings] = useState([]);
+  const [kwhOffset, setKwhOffset] = useState(0);
+  const [validationIssues, setValidationIssues] = useState([]);
+  const [pendingEditPayload, setPendingEditPayload] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [recalculationBackdateDate, setRecalculationBackdateDate] = useState(null);
+  const [recalculationTokenCost, setRecalculationTokenCost] = useState(0);
+  const [recalculationLoading, setRecalculationLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!currentUser) return;
@@ -222,6 +240,79 @@ const History = () => {
 
     const filename = `electricity_readings_${new Date().toISOString().split('T')[0]}`;
     downloadCSV(exportData, filename, headers);
+  };
+
+  // Handle recalculation needed callback from EditReadingModal
+  const handleRecalculationNeeded = (data) => {
+    setEditingId(data.readingId);
+    setPendingEditPayload(data.payload);
+    setAffectedReadings(data.affectedReadings);
+    setKwhOffset(data.kwhOffset);
+    setValidationIssues(data.validationIssues);
+    setRecalculationBackdateDate(data.backdateDate);
+    setRecalculationTokenCost(data.tokenCost);
+    setEditModalOpen(false); // Close edit modal
+    setShowRecalculationModal(true); // Open recalculation modal
+  };
+
+  // Handle recalculation confirmation (same logic as InputForm)
+  const handleRecalculationConfirm = async () => {
+    try {
+      setRecalculationLoading(true);
+
+      // 1. Update the existing reading first
+      await updateReading(editingId, pendingEditPayload);
+
+      // 2. Track in event sourcing system
+      const eventResult = await addEvent(currentUser.id, {
+        eventType: EVENT_TYPES.TOPUP,
+        eventDate: pendingEditPayload.date,
+        kwhAmount: kwhOffset,
+        tokenCost: recalculationTokenCost,
+        notes: pendingEditPayload.notes
+      });
+
+      // 3. Create recalculation batch for audit trail
+      if (affectedReadings.length > 0 && eventResult.event) {
+        await performCascadingRecalculation(
+          currentUser.id,
+          eventResult.event.id,
+          TRIGGER_TYPES.BACKDATE_TOPUP,
+          affectedReadings,
+          kwhOffset
+        );
+      }
+
+      // 4. Update all affected readings in OLD table (electricity_readings)
+      const readingsFromOldTable = await getReadingsAfterDate(currentUser.id, pendingEditPayload.date);
+
+      if (readingsFromOldTable.length > 0) {
+        const updates = readingsFromOldTable.map(reading => ({
+          id: reading.id,
+          kwh_value: (reading.kwh_value || 0) + kwhOffset
+        }));
+
+        await bulkUpdateReadingsKwh(updates);
+      }
+
+      // 5. Reload data and cleanup
+      await loadData();
+      setShowRecalculationModal(false);
+      setAffectedReadings([]);
+      setKwhOffset(0);
+      setValidationIssues([]);
+      setPendingEditPayload(null);
+      setEditingId(null);
+      setRecalculationBackdateDate(null);
+      setRecalculationTokenCost(0);
+      setSelectedReading(null);
+
+    } catch (err) {
+      console.error('Recalculation error:', err);
+      // TODO: Show error toast
+    } finally {
+      setRecalculationLoading(false);
+    }
   };
 
   return (
@@ -507,6 +598,29 @@ const History = () => {
         }}
         reading={selectedReading}
         onSave={handleSaveEdit}
+        onRecalculationNeeded={handleRecalculationNeeded}
+      />
+
+      {/* Recalculation Timeline Modal (same as InputForm) */}
+      <RecalculationTimelineModal
+        isOpen={showRecalculationModal}
+        onClose={() => {
+          setShowRecalculationModal(false);
+          setAffectedReadings([]);
+          setKwhOffset(0);
+          setValidationIssues([]);
+          setPendingEditPayload(null);
+          setEditingId(null);
+          setRecalculationBackdateDate(null);
+          setRecalculationTokenCost(0);
+        }}
+        onConfirm={handleRecalculationConfirm}
+        backdateDate={recalculationBackdateDate}
+        affectedEvents={affectedReadings}
+        newTopupKwh={kwhOffset}
+        tokenCost={recalculationTokenCost}
+        loading={recalculationLoading}
+        validationIssues={validationIssues}
       />
 
       {/* Delete Confirmation Modal */}
