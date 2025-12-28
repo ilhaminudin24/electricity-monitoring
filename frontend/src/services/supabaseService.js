@@ -387,7 +387,7 @@ export const checkReadingExists = async (userId, date) => {
         const endUtc = endOfLocalDay.toISOString();
 
         const { data, error } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('id, date, kwh_value, token_cost, notes, created_at')
             .eq('user_id', userId)
             .gte('date', startUtc)
@@ -404,8 +404,63 @@ export const checkReadingExists = async (userId, date) => {
     }
 };
 
-// Add new reading
+// =============================================================================
+// PHOTO UPLOAD HELPER (For Event Sourcing)
+// =============================================================================
+
+/**
+ * Upload meter photo to Supabase storage
+ * This function is used by event sourcing to upload photos
+ * 
+ * @param {string} userId - User ID
+ * @param {File} photoFile - Photo file to upload
+ * @returns {Promise<string|null>} Public URL of uploaded photo, or null if upload fails
+ */
+export const uploadMeterPhoto = async (userId, photoFile) => {
+    if (!photoFile) return null;
+
+    try {
+        const fileName = `${userId}/${Date.now()}_${photoFile.name}`;
+        const { error: uploadError } = await supabase.storage
+            .from('meter-photos')
+            .upload(fileName, photoFile);
+
+        if (uploadError) {
+            console.error('Photo upload error:', uploadError);
+            return null; // Continue without photo - don't fail the entire operation
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from('meter-photos')
+            .getPublicUrl(fileName);
+
+        return publicUrl;
+    } catch (error) {
+        console.error('Photo upload error:', error);
+        return null; // Continue without photo
+    }
+};
+
+// =============================================================================
+// DEPRECATED FUNCTIONS (Legacy - Use Event Sourcing Instead)
+// =============================================================================
+
+/**
+ * @deprecated This function is deprecated. Use event sourcing instead:
+ * - For meter readings: Use `addEvent(userId, { eventType: 'METER_READING', ... })` from eventService.js
+ * - For top-ups: Use `addEvent(userId, { eventType: 'TOPUP', ... })` from eventService.js
+ * 
+ * This function writes directly to the legacy `electricity_readings` table.
+ * The new architecture uses `token_events` as the single source of truth.
+ * 
+ * Migration: Replace all calls to this function with `addEvent()` from eventService.js
+ */
 export const addReading = async (userId, readingData, photoFile = null) => {
+    console.warn(
+        '⚠️ DEPRECATED: addReading() is deprecated. Use addEvent() from eventService.js instead. ' +
+        'See migration guide in implementation_plan.md'
+    );
     try {
         // CRITICAL: Ensure user profile exists before inserting reading
         // This prevents foreign key constraint errors
@@ -472,7 +527,7 @@ export const getReadings = async (userId, page = 1, pageSize = 10) => {
         const to = from + pageSize - 1;
 
         const { data, count, error } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('*', { count: 'exact' })
             .eq('user_id', userId)
             .order('date', { ascending: false })
@@ -489,7 +544,7 @@ export const getReadings = async (userId, page = 1, pageSize = 10) => {
 export const getLastReading = async (userId) => {
     try {
         const { data, error } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('*')
             .eq('user_id', userId)
             .order('date', { ascending: false })
@@ -517,7 +572,7 @@ export const getLastReadingBeforeDate = async (userId, beforeDate) => {
         const dateOnly = `${year}-${month}-${day}`; // Format: YYYY-MM-DD
 
         const { data, error } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('*')
             .eq('user_id', userId)
             .lt('date', dateOnly) // Strictly BEFORE this DATE (ignores time)
@@ -541,7 +596,7 @@ export const getDashboardStats = async (userId) => {
 
         // 1. Get last reading
         const { data: lastReading, error: lastError } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('*')
             .eq('user_id', userId)
             .order('date', { ascending: false })
@@ -553,7 +608,7 @@ export const getDashboardStats = async (userId) => {
 
         // 2. Get current month readings
         const { data: monthReadings, error: monthError } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('kwh_value')
             .eq('user_id', userId)
             .gte('date', startOfMonth);
@@ -583,7 +638,7 @@ export const getDashboardStats = async (userId) => {
 export const getAllReadings = async (userId, limit = 1000) => {
     try {
         const { data, error } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('*')
             .eq('user_id', userId)
             .order('date', { ascending: false })
@@ -596,8 +651,21 @@ export const getAllReadings = async (userId, limit = 1000) => {
     }
 };
 
-// Update reading
+/**
+ * @deprecated This function is deprecated. Use event sourcing instead:
+ * - Use `updateEvent()` from eventService.js (to be implemented)
+ * - Or void the old event and create a new one
+ * 
+ * This function writes directly to the legacy `electricity_readings` table.
+ * The new architecture uses `token_events` as the single source of truth.
+ * 
+ * Migration: Implement updateEvent() in eventService.js or use void + create pattern
+ */
 export const updateReading = async (readingId, updates) => {
+    console.warn(
+        '⚠️ DEPRECATED: updateReading() is deprecated. Use updateEvent() from eventService.js instead. ' +
+        'This function will be removed in a future version.'
+    );
     try {
         // First, get the reading to find user_id
         const { data: existingReading, error: fetchError } = await supabase
@@ -657,8 +725,21 @@ export const updateReading = async (readingId, updates) => {
     }
 };
 
-// Delete reading
+/**
+ * @deprecated This function is deprecated. Use event sourcing instead:
+ * - Use `voidEvent()` from eventService.js to mark events as voided
+ * - This maintains audit trail and allows rollback
+ * 
+ * This function deletes directly from the legacy `electricity_readings` table.
+ * The new architecture uses `token_events` with soft deletes (voiding).
+ * 
+ * Migration: Replace all calls with voidEvent() from eventService.js
+ */
 export const deleteReading = async (readingId) => {
+    console.warn(
+        '⚠️ DEPRECATED: deleteReading() is deprecated. Use voidEvent() from eventService.js instead. ' +
+        'Hard deletes are not recommended - use soft deletes (voiding) for audit trail.'
+    );
     try {
         const { error } = await supabase
             .from('electricity_readings')
@@ -684,7 +765,7 @@ export const getReadingsAfterDate = async (userId, afterDate) => {
         const dateOnly = `${year}-${month}-${day}`;
 
         const { data, error } = await supabase
-            .from('electricity_readings')
+            .from('electricity_readings_v')
             .select('*')
             .eq('user_id', userId)
             .gt('date', dateOnly) // Strictly AFTER this date
@@ -698,10 +779,19 @@ export const getReadingsAfterDate = async (userId, afterDate) => {
     }
 };
 
-// Bulk update multiple readings' kwh_value
-// Used for backdate recalculation - adds offset to all affected readings
-// @param updates - Array of { id, kwh_value }
+/**
+ * @deprecated This function is deprecated and no longer needed.
+ * 
+ * The materialized view (`electricity_readings_mv`) automatically recalculates positions
+ * when events are added to `token_events`. Manual bulk updates are no longer necessary.
+ * 
+ * Migration: Remove all calls to this function. Use `addEvent()` or `performCascadingRecalculation()` instead.
+ */
 export const bulkUpdateReadingsKwh = async (updates) => {
+    console.warn(
+        '⚠️ DEPRECATED: bulkUpdateReadingsKwh() is deprecated and no longer needed. ' +
+        'The materialized view auto-refreshes. This function will be removed in a future version.'
+    );
     try {
         if (!updates || updates.length === 0) {
             return [];

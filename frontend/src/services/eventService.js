@@ -117,6 +117,7 @@ export const checkForBackdate = async (userId, eventDate) => {
             .select('*')
             .eq('user_id', userId)
             .eq('is_voided', false)
+            .neq('event_type', EVENT_TYPES.VOID)  // Exclude VOID events
             .gt('event_date', eventDate)
             .order('event_date', { ascending: true });
 
@@ -391,6 +392,8 @@ export const rollbackRecalculation = async (batchId, reason, userId) => {
  */
 export const voidEvent = async (eventId, reason, userId) => {
     try {
+        console.log('🗑️ voidEvent called:', { eventId, reason, userId });
+
         // Get the original event
         const { data: original, error: fetchError } = await supabase
             .from('token_events')
@@ -398,10 +401,20 @@ export const voidEvent = async (eventId, reason, userId) => {
             .eq('id', eventId)
             .single();
 
-        if (fetchError) throw fetchError;
+        if (fetchError) {
+            console.error('❌ Failed to fetch event:', fetchError);
+            throw fetchError;
+        }
+
+        if (!original) {
+            console.error('❌ Event not found:', eventId);
+            throw new Error('Event not found');
+        }
+
+        console.log('✅ Found event to void:', original);
 
         // Mark original as voided
-        const { error: voidError } = await supabase
+        const { data: updateData, error: voidError } = await supabase
             .from('token_events')
             .update({
                 is_voided: true,
@@ -409,12 +422,18 @@ export const voidEvent = async (eventId, reason, userId) => {
                 voided_by: userId,
                 voided_reason: reason
             })
-            .eq('id', eventId);
+            .eq('id', eventId)
+            .select(); // IMPORTANT: Add select() to get updated data
 
-        if (voidError) throw voidError;
+        if (voidError) {
+            console.error('❌ Failed to void event:', voidError);
+            throw voidError;
+        }
+
+        console.log('✅ Event voided successfully:', updateData);
 
         // Create VOID event for audit trail
-        const { data: voidEvent, error: createError } = await supabase
+        const { data: voidEventData, error: createError } = await supabase
             .from('token_events')
             .insert({
                 user_id: original.user_id,
@@ -436,13 +455,15 @@ export const voidEvent = async (eventId, reason, userId) => {
             .single();
 
         if (createError) {
-            console.warn('Failed to create void event:', createError);
+            console.warn('⚠️ Failed to create void event:', createError);
+        } else {
+            console.log('✅ Void event created:', voidEventData);
         }
 
-        return { success: true, voidEvent };
+        return { success: true, voidEvent: voidEventData };
 
     } catch (error) {
-        console.error('Error voiding event:', error);
+        console.error('❌ Error voiding event:', error);
         throw error;
     }
 };
@@ -474,6 +495,7 @@ export const getEventsAfterDate = async (userId, afterDate) => {
             .select('*')
             .eq('user_id', userId)
             .eq('is_voided', false)
+            .neq('event_type', EVENT_TYPES.VOID)  // Exclude VOID events
             .gt('event_date', afterDate)
             .order('event_date', { ascending: true });
 
@@ -520,6 +542,98 @@ export const previewBackdateImpact = async (userId, backdateDate, topupKwh) => {
 };
 
 // =============================================================================
+// UPDATE OPERATIONS (Event Sourcing Pattern)
+// =============================================================================
+
+/**
+ * Update an event using the void-and-recreate pattern
+ * This maintains immutability and audit trail
+ * 
+ * @param {string} userId - User ID
+ * @param {string} eventId - ID of event to update
+ * @param {Object} updates - Updated event data
+ * @param {string} [updates.eventType] - Updated event type
+ * @param {Date|string} [updates.eventDate] - Updated event date
+ * @param {number} [updates.kwhAmount] - Updated kWh amount
+ * @param {number} [updates.tokenCost] - Updated token cost
+ * @param {string} [updates.notes] - Updated notes
+ * @param {string} [updates.meterPhotoUrl] - Updated photo URL
+ * @param {string} reason - Reason for the update (for audit trail)
+ * @returns {Promise<{voidedEvent: Object, newEvent: Object, requiresRecalculation: boolean}>}
+ */
+export const updateEvent = async (userId, eventId, updates, reason = 'User edit') => {
+    try {
+        // 1. Get the original event
+        const { data: originalEvent, error: fetchError } = await supabase
+            .from('token_events')
+            .select('*')
+            .eq('id', eventId)
+            .eq('user_id', userId)
+            .eq('is_voided', false)
+            .single();
+
+        if (fetchError) throw fetchError;
+        if (!originalEvent) throw new Error('Event not found or already voided');
+
+        // 2. Void the original event
+        // voidEvent signature: (eventId, reason, userId)
+        const voidedEvent = await voidEvent(eventId, reason, userId);
+
+        // 3. Create new event with updated data
+        const newEventData = {
+            eventType: updates.eventType || originalEvent.event_type,
+            eventDate: updates.eventDate || originalEvent.event_date,
+            kwhAmount: updates.kwhAmount !== undefined ? updates.kwhAmount : originalEvent.kwh_amount,
+            tokenCost: updates.tokenCost !== undefined ? updates.tokenCost : originalEvent.token_cost,
+            notes: updates.notes !== undefined ? updates.notes : originalEvent.notes,
+            meterPhotoUrl: updates.meterPhotoUrl !== undefined ? updates.meterPhotoUrl : originalEvent.meter_photo_url
+        };
+
+        const newEventResult = await addEvent(userId, newEventData);
+
+        // 4. Check if date changed (requires recalculation)
+        const dateChanged = new Date(updates.eventDate || originalEvent.event_date).getTime() !==
+            new Date(originalEvent.event_date).getTime();
+
+        // 5. Check if this creates a backdate scenario
+        const requiresRecalculation = dateChanged && newEventResult.isBackdate;
+
+        return {
+            voidedEvent,
+            newEvent: newEventResult.event,
+            requiresRecalculation,
+            affectedEvents: newEventResult.affectedEvents,
+            affectedCount: newEventResult.affectedCount,
+            metadata: {
+                originalEventId: eventId,
+                reason,
+                dateChanged,
+                updatedFields: Object.keys(updates)
+            }
+        };
+
+    } catch (error) {
+        console.error('Error updating event:', error);
+        throw error;
+    }
+};
+
+/**
+ * Delete an event (soft delete via voiding)
+ * This is an alias for voidEvent with a more intuitive name
+ * 
+ * @param {string} userId - User ID
+ * @param {string} eventId - ID of event to delete
+ * @param {string} reason - Reason for deletion
+ * @returns {Promise<Object>} Voided event
+ */
+export const deleteEvent = async (userId, eventId, reason = 'User deleted') => {
+    // voidEvent signature: (eventId, reason, userId)
+    return await voidEvent(eventId, reason, userId);
+};
+
+
+// =============================================================================
 // EXPORTS FOR COMPATIBILITY
 // =============================================================================
 
@@ -527,6 +641,8 @@ export default {
     EVENT_TYPES,
     TRIGGER_TYPES,
     addEvent,
+    updateEvent,
+    deleteEvent,
     checkForBackdate,
     getEventsWithPositions,
     getLastEventBeforeDate,

@@ -179,6 +179,9 @@
         "edit": "Edit",
         "optional": "optional"
     },
+    "units": {
+        "kwh": "kWh"
+    },
     "input": {
         "title": "Input Meter Reading",
         "subtitle": "Record your electricity meter reading",
@@ -247,7 +250,9 @@
         "allTime": "All Time",
         "allTypes": "All Types",
         "rowsPerPage": "Rows per page",
-        "updateFailed": "Failed to update reading"
+        "updateFailed": "Failed to update reading",
+        "deleteConfirm": "Delete Reading?",
+        "deleteMessage": "Are you sure you want to delete this reading? This action cannot be undone."
     },
     "settings": {
         "title": "Settings & Configuration",

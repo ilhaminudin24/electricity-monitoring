@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { addReading, getLastReading, getLastReadingBeforeDate, checkReadingExists, deleteReading, updateReading, getReadingsAfterDate, bulkUpdateReadingsKwh } from '../services/supabaseService';
+import { getLastReading, getLastReadingBeforeDate, checkReadingExists, getReadingsAfterDate, uploadMeterPhoto } from '../services/supabaseService';
 import {
   addEvent,
+  updateEvent,
+  deleteEvent,
   validateBackdateOperation,
   performCascadingRecalculation,
   previewBackdateImpact,
@@ -335,34 +337,74 @@ const InputForm = () => {
     }
   };
 
-  // Extracted save logic for reuse
+  // Extracted save logic for reuse - now uses Event Sourcing
   const saveReading = async (readingData) => {
-    // Add timeout to prevent hanging
-    const savePromise = addReading(currentUser.id, readingData, photoFile);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000)
-    );
+    try {
+      // Determine event type based on context
+      let eventType;
+      let kwhAmount;
 
-    await Promise.race([savePromise, timeoutPromise]);
+      if (activeTab === 'topup' || readingData.token_amount) {
+        // Top-up: adds kWh to meter position
+        eventType = EVENT_TYPES.TOPUP;
+        kwhAmount = readingData.token_amount || parseFloat(formData.token_amount) || 0;
+      } else {
+        // Meter reading: records consumption (decreases position)
+        eventType = EVENT_TYPES.METER_READING;
+        // For meter readings, kwh_amount represents the consumption
+        // The materialized view will calculate the position
+        kwhAmount = readingData.kwh || 0;
+      }
 
-    setSuccess(true);
+      // Upload photo if exists
+      let photoUrl = null;
+      if (photoFile) {
+        photoUrl = await uploadMeterPhoto(currentUser.id, photoFile);
+      }
 
-    // Reset form
-    setFormData({
-      reading_kwh: '',
-      token_amount: '',
-      token_cost: '',
-      token_cost_display: '',
-      notes: '',
-    });
-    setPhotoFile(null);
-    setPhotoPreview(null);
-    setCalculatedTokenAmount(null);
+      // Save to event sourcing system (single source of truth)
+      const eventData = {
+        eventType: eventType,
+        eventDate: readingData.date,
+        kwhAmount: kwhAmount,
+        tokenCost: readingData.token_cost || null,
+        notes: readingData.notes || null,
+        meterPhotoUrl: photoUrl
+      };
 
-    // Redirect to dashboard after 2 seconds
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2000);
+      // Add timeout to prevent hanging
+      const savePromise = addEvent(currentUser.id, eventData);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000)
+      );
+
+      await Promise.race([savePromise, timeoutPromise]);
+
+      // Note: Materialized view (electricity_readings_mv) will auto-refresh
+      // No need to manually update electricity_readings table
+
+      setSuccess(true);
+
+      // Reset form
+      setFormData({
+        reading_kwh: '',
+        token_amount: '',
+        token_cost: '',
+        token_cost_display: '',
+        notes: '',
+      });
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setCalculatedTokenAmount(null);
+
+      // Redirect to dashboard after 2 seconds
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    } catch (error) {
+      console.error('Error saving reading:', error);
+      throw error; // Re-throw to be caught by handleSubmit
+    }
   };
 
   // Handle Edit Existing from duplicate modal
@@ -376,17 +418,37 @@ const InputForm = () => {
   const handleEditSave = async (id, updates) => {
     try {
       setLoading(true);
-      await updateReading(id, updates);
+
+      // Use event sourcing - void old event and create new one
+      const result = await updateEvent(currentUser.id, id, {
+        kwhAmount: updates.kwh_value,
+        tokenCost: updates.token_cost,
+        notes: updates.notes,
+        eventDate: updates.date
+      }, 'User edited reading');
+
+      // Check if recalculation is needed
+      if (result.requiresRecalculation && result.affectedCount > 0) {
+        // Perform cascading recalculation
+        await performCascadingRecalculation(
+          currentUser.id,
+          result.newEvent.id,
+          TRIGGER_TYPES.EDIT_TOPUP,
+          result.affectedEvents,
+          0 // No offset for edits, positions recalculated from events
+        );
+      }
+
       setSuccess(true);
       setShowEditModal(false);
       setEditingReading(null);
       setDuplicateReading(null);
       setPendingSubmission(null);
 
-      // Navigate to dashboard or refresh? 
-      // User likely satisfied with editing the existing one.
+      // Navigate to dashboard
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (err) {
+      console.error('Error updating event:', err);
       setError(err.message || 'Failed to update reading');
     } finally {
       setLoading(false);
@@ -400,11 +462,22 @@ const InputForm = () => {
 
     try {
       setLoading(true);
-      // Delete existing reading first
-      await deleteReading(duplicateReading.id);
-      // Then save new one
+
+      // Use event sourcing - void existing event
+      await deleteEvent(currentUser.id, duplicateReading.id, 'User replaced with new reading');
+
+      // Then save new one using event sourcing
       await saveReading(pendingSubmission);
+
+      setSuccess(true);
+      setDuplicateReading(null);
+      setPendingSubmission(null);
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
     } catch (err) {
+      console.error('Error replacing reading:', err);
       let errorMessage = t('input.validation.failedToSave');
       if (err.message) {
         errorMessage = err.message;
@@ -444,20 +517,24 @@ const InputForm = () => {
       setLoading(true);
       setShowRecalculationModal(false);
 
-      // 1. Save the new backdate top-up reading first (to old table for compatibility)
-      const savedReading = await addReading(currentUser.id, pendingSubmission, photoFile);
+      // Upload photo if exists
+      let photoUrl = null;
+      if (photoFile) {
+        photoUrl = await uploadMeterPhoto(currentUser.id, photoFile);
+      }
 
-      // 2. Also track in new event sourcing system
+      // Save to event sourcing system (single source of truth)
       const tokenCostNumeric = pendingSubmission.token_cost || 0;
       const eventResult = await addEvent(currentUser.id, {
         eventType: EVENT_TYPES.TOPUP,
         eventDate: pendingSubmission.date,
         kwhAmount: kwhOffset,
         tokenCost: tokenCostNumeric,
-        notes: pendingSubmission.notes
+        notes: pendingSubmission.notes,
+        meterPhotoUrl: photoUrl
       });
 
-      // 3. Create recalculation batch for audit trail and rollback capability
+      // Create recalculation batch for audit trail and rollback capability
       if (affectedReadings.length > 0 && eventResult.event) {
         await performCascadingRecalculation(
           currentUser.id,
@@ -468,18 +545,8 @@ const InputForm = () => {
         );
       }
 
-      // 4. Update all affected readings in OLD table (electricity_readings)
-      // We need to fetch from electricity_readings table, not use token_events IDs
-      const readingsFromOldTable = await getReadingsAfterDate(currentUser.id, pendingSubmission.date);
-
-      if (readingsFromOldTable.length > 0) {
-        const updates = readingsFromOldTable.map(reading => ({
-          id: reading.id,
-          kwh_value: (reading.kwh_value || 0) + kwhOffset
-        }));
-
-        await bulkUpdateReadingsKwh(updates);
-      }
+      // Note: Materialized view (electricity_readings_mv) will auto-refresh
+      // No need to manually update electricity_readings table anymore
 
       // Success - show success message and navigate
       setSuccess(true);

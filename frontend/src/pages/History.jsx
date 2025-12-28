@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllReadings, updateReading, deleteReading, getUserSettings, getReadingsAfterDate, bulkUpdateReadingsKwh } from '../services/supabaseService';
+import { getAllReadings, getUserSettings, getReadingsAfterDate } from '../services/supabaseService';
 import { formatDateTimeLocal } from '../utils/date';
 import { formatRupiah } from '../utils/rupiah';
 import {
@@ -24,6 +24,8 @@ import RecalculationTimelineModal from '../components/RecalculationTimelineModal
 import { useNavigate } from 'react-router-dom';
 import {
   addEvent,
+  updateEvent,
+  deleteEvent,
   performCascadingRecalculation,
   EVENT_TYPES,
   TRIGGER_TYPES
@@ -197,16 +199,64 @@ const History = () => {
   };
 
   const handleSaveEdit = async (id, payload) => {
-    await updateReading(id, payload);
-    await loadData();
-    setEditModalOpen(false);
+    try {
+      console.log('📝 handleSaveEdit called with:', { id, payload });
+      
+      // Use event sourcing - void old event and create new one
+      // Note: EditReadingModal sends 'kwh' not 'kwh_value'
+      const result = await updateEvent(currentUser.id, id, {
+        kwhAmount: payload.kwh || payload.reading_kwh || payload.kwh_value,
+        tokenCost: payload.token_cost,
+        notes: payload.notes,
+        eventDate: payload.date
+      }, 'User edited from history');
+
+      // Check if recalculation is needed
+      if (result.requiresRecalculation && result.affectedCount > 0) {
+        await performCascadingRecalculation(
+          currentUser.id,
+          result.newEvent.id,
+          TRIGGER_TYPES.EDIT_TOPUP,
+          result.affectedEvents,
+          0 // Positions recalculated from events
+        );
+      }
+
+      // Small delay to allow materialized view to refresh
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await loadData();
+      setEditModalOpen(false);
+    } catch (error) {
+      console.error('Error updating reading:', error);
+      // TODO: Show error toast
+    }
   };
 
   const handleConfirmDelete = async () => {
     if (selectedReading) {
-      await deleteReading(selectedReading.id);
-      await loadData();
-      setDeleteModalOpen(false);
+      try {
+        console.log('🗑️ Starting delete process for reading:', selectedReading);
+
+        // Use event sourcing - soft delete via voiding
+        const result = await deleteEvent(currentUser.id, selectedReading.id, 'User deleted from history');
+        console.log('✅ deleteEvent returned:', result);
+
+        // Small delay to allow materialized view to refresh
+        // The trigger should auto-refresh, but we add a small delay to ensure it completes
+        console.log('⏳ Waiting 500ms for materialized view refresh...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        console.log('🔄 Reloading data...');
+        await loadData();
+        console.log('✅ Data reloaded');
+
+        setDeleteModalOpen(false);
+        console.log('✅ Delete process complete');
+      } catch (error) {
+        console.error('❌ Error deleting reading:', error);
+        // TODO: Show error toast
+      }
     }
   };
 
@@ -255,47 +305,33 @@ const History = () => {
     setShowRecalculationModal(true); // Open recalculation modal
   };
 
-  // Handle recalculation confirmation (same logic as InputForm)
+  // Handle recalculation confirmation - simplified for event sourcing
   const handleRecalculationConfirm = async () => {
     try {
       setRecalculationLoading(true);
 
-      // 1. Update the existing reading first
-      await updateReading(editingId, pendingEditPayload);
-
-      // 2. Track in event sourcing system
-      const eventResult = await addEvent(currentUser.id, {
-        eventType: EVENT_TYPES.TOPUP,
-        eventDate: pendingEditPayload.date,
+      // Use event sourcing - update the event
+      const result = await updateEvent(currentUser.id, editingId, {
         kwhAmount: kwhOffset,
         tokenCost: recalculationTokenCost,
-        notes: pendingEditPayload.notes
-      });
+        notes: pendingEditPayload.notes,
+        eventDate: pendingEditPayload.date
+      }, 'User edited with backdate recalculation');
 
-      // 3. Create recalculation batch for audit trail
-      if (affectedReadings.length > 0 && eventResult.event) {
+      // Perform cascading recalculation if needed
+      if (result.requiresRecalculation && result.affectedCount > 0) {
         await performCascadingRecalculation(
           currentUser.id,
-          eventResult.event.id,
+          result.newEvent.id,
           TRIGGER_TYPES.BACKDATE_TOPUP,
-          affectedReadings,
+          result.affectedEvents,
           kwhOffset
         );
       }
 
-      // 4. Update all affected readings in OLD table (electricity_readings)
-      const readingsFromOldTable = await getReadingsAfterDate(currentUser.id, pendingEditPayload.date);
+      // Materialized view auto-refreshes - no manual updates needed!
 
-      if (readingsFromOldTable.length > 0) {
-        const updates = readingsFromOldTable.map(reading => ({
-          id: reading.id,
-          kwh_value: (reading.kwh_value || 0) + kwhOffset
-        }));
-
-        await bulkUpdateReadingsKwh(updates);
-      }
-
-      // 5. Reload data and cleanup
+      // Reload data and cleanup
       await loadData();
       setShowRecalculationModal(false);
       setAffectedReadings([]);

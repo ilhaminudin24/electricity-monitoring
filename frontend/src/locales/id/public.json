@@ -179,6 +179,9 @@
         "edit": "Ubah",
         "optional": "opsional"
     },
+    "units": {
+        "kwh": "kWh"
+    },
     "input": {
         "title": "Input Pembacaan Meter",
         "subtitle": "Catat pembacaan meter listrik Anda",
@@ -247,7 +250,9 @@
         "allTime": "Semua Waktu",
         "allTypes": "Semua Tipe",
         "rowsPerPage": "Baris per halaman",
-        "updateFailed": "Gagal memperbarui pembacaan"
+        "updateFailed": "Gagal memperbarui pembacaan",
+        "deleteConfirm": "Hapus Pembacaan?",
+        "deleteMessage": "Apakah Anda yakin ingin menghapus pembacaan ini? Tindakan ini tidak dapat dibatalkan."
     },
     "settings": {
         "title": "Pengaturan & Konfigurasi",
